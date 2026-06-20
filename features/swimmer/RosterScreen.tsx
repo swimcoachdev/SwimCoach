@@ -50,7 +50,7 @@ export function RosterScreen({
 
   return (
     <View style={s.root}>
-      <Header title="Koti">
+      <Header title="SwimCoach">
         <View style={s.headerBody}>
           <Field placeholder="Hae nimellä…" value={search} onChangeText={onSearch} />
 
