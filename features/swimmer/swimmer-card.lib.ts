@@ -189,11 +189,19 @@ function rankMetric(lens: LensKey, s: SwimmerSummary): number {
   }
 }
 
-/** Sort a roster for the active lens: name → A–Z, everything else → high to low. */
-export function rankSwimmers(lens: LensKey, swimmers: SwimmerSummary[]): SwimmerSummary[] {
+/**
+ * Sort a roster for the active lens: name → A–Z, everything else → high to low.
+ * `reversed` flips that natural order (Z–A / low to high) — the roster's second-tap.
+ */
+export function rankSwimmers(
+  lens: LensKey,
+  swimmers: SwimmerSummary[],
+  reversed = false,
+): SwimmerSummary[] {
   const copy = [...swimmers];
-  if (lens === "name") {
-    return copy.sort((a, b) => a.full_name.localeCompare(b.full_name, "fi"));
-  }
-  return copy.sort((a, b) => rankMetric(lens, b) - rankMetric(lens, a));
+  const sorted =
+    lens === "name"
+      ? copy.sort((a, b) => a.full_name.localeCompare(b.full_name, "fi"))
+      : copy.sort((a, b) => rankMetric(lens, b) - rankMetric(lens, a));
+  return reversed ? sorted.reverse() : sorted;
 }
