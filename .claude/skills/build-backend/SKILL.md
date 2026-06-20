@@ -109,4 +109,4 @@ Run/reset commands and local URLs/keys are in `CLAUDE.md`.
 
 - [references/backend-checklist.md](references/backend-checklist.md) — run through on every change.
 - Frontend/data-hook conventions: the `build-mobile` skill. Run/reset commands, local URLs & demo login: `CLAUDE.md`.
-- Direction & priorities (incl. making the AI copilot real): `docs/2026-06-20-swimcoach-roadmap.md`.
+- Direction & priorities (incl. making the AI copilot real): the dated docs in `docs/`.

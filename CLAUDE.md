@@ -15,7 +15,7 @@ Conventions live in skills, not here. Load the relevant one before writing code:
 - **`build-mobile`** — screens, components, hooks, queries (`app/`, `components/`, `hooks/`, `lib/`).
 - **`build-backend`** — migrations, RLS, views, seed, generated types, edge functions (`supabase/`).
 
-Direction & priorities: `docs/2026-06-20-swimcoach-roadmap.md` (and the dated docs in `docs/`).
+Direction & priorities: the dated docs in `docs/` (read the latest roadmap there).
 
 ## Run
 
@@ -62,13 +62,3 @@ npx expo start -c              # run with a cleared Metro cache if a change does
 - **Race distances**: TEXT `'50'..'1500'` m. Times are integer **milliseconds** (format via `lib/utils/time.ts`).
 - Key view `swimmer_season_summary` aggregates per-swimmer season stats (volume, zone %, goal %) and
   drives the coach dashboard + copilot.
-
-## Known issues / rough edges
-
-- **The "AI coach" is fake**: `lib/ai/copilot.ts` is rule-based keyword matching; the real GPT-4o edge
-  function (`supabase/functions/copilot`) is unwired and has broken `\!` escapes. (Roadmap Phase two.)
-- **No design system**: hardcoded hex, emoji icons, web-only `calc()` widths in `SwimmerCard`, dead
-  ternary (stroke label always "VAPAA"). (Roadmap Phase one.)
-- **NativeWind / Tailwind fully removed** (it was unused but its runtime threw `setColorScheme` errors, and `+html.tsx` injected the Tailwind CDN). The app is StyleSheet-only; build a theme-token module for the redesign (roadmap Phase one).
-- The repo's `demo_*.sql` seeds and the un-suffixed `001` migration are **broken/drifted** — use `seed.sql`
-  and `001_initial_schema_fixed.sql`; broken SQL is parked in `supabase/sql-archive/`.

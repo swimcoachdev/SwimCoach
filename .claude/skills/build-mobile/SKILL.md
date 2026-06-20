@@ -9,10 +9,10 @@ This skill owns **how we build the SwimCoach client** (`app/`, `components/`, `h
 It is the source of truth for client conventions — `CLAUDE.md` only points here, and run/check
 commands live there.
 
-The current code is **pre-convention** (AI-generated): screens fetch with `useEffect` + `useState`,
-colors are hardcoded hex, there is no theme module and no tests. Treat the rules below as the
-**target** every file you touch should move toward — don't rewrite the world in one diff, but never
-add new code in the old style.
+The design system and theme-token module (`constants/theme.ts`) are established and in use. Some
+older code is still **pre-convention** (AI-generated): screens that fetch with `useEffect` + `useState`,
+hardcoded hex, and there are no tests. Treat the rules below as the **target** every file you touch
+should move toward — don't rewrite the world in one diff, but never add new code in the old style.
 
 ## When to use
 
@@ -36,8 +36,8 @@ add new code in the old style.
   `features/onboarding/useOnboardingStore.ts`) — never for server data.
 - **Types are generated** from the database: `npm run db:types` → `types/database.ts`. Never hand-write
   table row types; derive from the generated `Database` type.
-- **Charts:** `victory-native`. **Styling:** `StyleSheet.create` against tokens in `constants/theme.ts`
-  (to be established — see Styling). Runs iOS / Android / web (web = centered phone-width column).
+- **Charts:** `victory-native`. **Styling:** `StyleSheet.create` against the tokens in `constants/theme.ts`
+  (see Styling). Runs iOS / Android / web (web = centered phone-width column).
 
 ## Layout
 
@@ -131,4 +131,4 @@ imports nothing from `react-native`.
 
 - [references/mobile-checklist.md](references/mobile-checklist.md) — run through on every file you touch.
 - Backend/data conventions: the `build-backend` skill. Run/check commands & domain glossary: `CLAUDE.md`.
-- Direction & priorities: `docs/2026-06-20-swimcoach-roadmap.md`.
+- Direction & priorities: the dated docs in `docs/`.
