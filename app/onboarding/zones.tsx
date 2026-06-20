@@ -79,9 +79,9 @@ export default function ZonesScreen() {
           <Text style={s.backText}>← Takaisin</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[s.nextBtn, total \!== 100 && s.nextBtnDisabled]}
+          style={[s.nextBtn, total !== 100 && s.nextBtnDisabled]}
           onPress={() => total === 100 && router.push("/onboarding/goal")}
-          disabled={total \!== 100}
+          disabled={total !== 100}
         >
           <Text style={s.nextText}>Seuraava →</Text>
         </TouchableOpacity>

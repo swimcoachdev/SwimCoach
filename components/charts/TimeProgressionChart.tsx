@@ -71,7 +71,7 @@ export function TimeProgressionChart({ data, baseline_ms, label }: Props) {
               {msToTimeString(d.result_time_ms)}
             </Text>
             {isPR && <Text style={s.prBadge}>PR</Text>}
-            {vsBaseline \!= null && vsBaseline > 0 && (
+            {vsBaseline != null && vsBaseline > 0 && (
               <Text style={s.vsText}>−{vsBaseline}%</Text>
             )}
           </View>

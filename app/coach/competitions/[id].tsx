@@ -36,7 +36,7 @@ export default function CompetitionDetailScreen() {
   const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
-    if (\!id) return;
+    if (!id) return;
     Promise.all([
       getCompetitionWithResults(id).then(({ data }) => setCompetition(data)),
       clubId
@@ -52,7 +52,7 @@ export default function CompetitionDetailScreen() {
   }
 
   async function saveResult() {
-    if (\!entry.swimmerId || \!entry.timeString?.trim()) {
+    if (!entry.swimmerId || !entry.timeString?.trim()) {
       setSaveError("Täytä kaikki pakolliset kentät"); return;
     }
     const timeMs = timeStringToMs(entry.timeString);
@@ -62,20 +62,20 @@ export default function CompetitionDetailScreen() {
     setSaveError("");
     try {
       await upsertCompetitionResult({
-        competition_id: id\!,
-        swimmer_id: entry.swimmerId\!,
-        stroke: entry.stroke\!,
+        competition_id: id!,
+        swimmer_id: entry.swimmerId!,
+        stroke: entry.stroke!,
         distance: String(entry.distance),
         result_time_ms: timeMs,
         place_overall: entry.placeOverall ? parseInt(entry.placeOverall) : undefined,
       });
 
       await updatePersonalRecord(
-        entry.swimmerId\!, entry.stroke\!, String(entry.distance),
-        timeMs, competition.competition_date, id\!
+        entry.swimmerId!, entry.stroke!, String(entry.distance),
+        timeMs, competition.competition_date, id!
       );
 
-      const { data } = await getCompetitionWithResults(id\!);
+      const { data } = await getCompetitionWithResults(id!);
       setCompetition(data);
       setModalVisible(false);
     } catch (e: any) {
@@ -95,7 +95,7 @@ export default function CompetitionDetailScreen() {
   const bySwimmer: Record<string, { name: string; results: any[] }> = {};
   for (const r of results) {
     const sid = r.swimmer_id;
-    if (\!bySwimmer[sid]) bySwimmer[sid] = { name: r.swimmers?.full_name ?? "—", results: [] };
+    if (!bySwimmer[sid]) bySwimmer[sid] = { name: r.swimmers?.full_name ?? "—", results: [] };
     bySwimmer[sid].results.push(r);
   }
 
@@ -193,7 +193,7 @@ export default function CompetitionDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            {\!entry.swimmerId ? (
+            {!entry.swimmerId ? (
               <>
                 <Text style={s.fieldLabel}>Uimari</Text>
                 <ScrollView style={{ maxHeight: 180 }}>
@@ -267,13 +267,13 @@ export default function CompetitionDetailScreen() {
             {saveError ? <Text style={s.errorText}>{saveError}</Text> : null}
 
             <TouchableOpacity
-              style={[s.saveBtn, (\!entry.swimmerId || \!entry.timeString) && s.saveBtnDisabled]}
+              style={[s.saveBtn, (!entry.swimmerId || !entry.timeString) && s.saveBtnDisabled]}
               onPress={saveResult}
-              disabled={saving || \!entry.swimmerId || \!entry.timeString}
+              disabled={saving || !entry.swimmerId || !entry.timeString}
             >
               {saving
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={[s.saveBtnText, (\!entry.swimmerId || \!entry.timeString) && s.saveBtnTextDisabled]}>
+                : <Text style={[s.saveBtnText, (!entry.swimmerId || !entry.timeString) && s.saveBtnTextDisabled]}>
                     Tallenna tulos
                   </Text>
               }

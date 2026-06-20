@@ -18,7 +18,7 @@ export default function BaselineScreen() {
   const [addError, setAddError] = useState("");
 
   function addResult() {
-    if (\!time.trim()) { setAddError("Syötä aika"); return; }
+    if (!time.trim()) { setAddError("Syötä aika"); return; }
     const exists = data.baselines.find(b => b.stroke === stroke && b.distance === distance);
     if (exists) { setAddError("Tämä laji+matka on jo lisätty. Poista ensin aiempi tulos."); return; }
     setAddError("");
@@ -28,7 +28,7 @@ export default function BaselineScreen() {
   }
 
   function remove(id: string) {
-    setData({ baselines: data.baselines.filter(b => b.id \!== id) });
+    setData({ baselines: data.baselines.filter(b => b.id !== id) });
   }
 
   return (

@@ -23,7 +23,7 @@ export default function OnboardingDone() {
         .eq("user_id", user?.id)
         .single();
 
-      if (\!swimmer) throw new Error("Uimaria ei löydy");
+      if (!swimmer) throw new Error("Uimaria ei löydy");
 
       const year = new Date().getFullYear();
 
@@ -81,9 +81,9 @@ export default function OnboardingDone() {
       {status === "done" && (
         <>
           <Text style={s.bigEmoji}>🎯</Text>
-          <Text style={s.doneTitle}>Kaikki valmista\!</Text>
+          <Text style={s.doneTitle}>Kaikki valmista!</Text>
           <Text style={s.doneText}>
-            Lähtötasosi ja tavoitteesi on tallennettu. Hyvää kautta\!
+            Lähtötasosi ja tavoitteesi on tallennettu. Hyvää kautta!
           </Text>
         </>
       )}
