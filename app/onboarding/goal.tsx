@@ -1,8 +1,8 @@
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { StepIndicator } from "@/components/onboarding/StepIndicator";
+import { StepIndicator } from "@/features/onboarding/StepIndicator";
 import { STROKES, RACE_DISTANCES, type SwimStroke, type RaceDistance } from "@/constants/strokes";
-import { useOnboardingStore } from "@/hooks/useOnboardingStore";
+import { useOnboardingStore } from "@/features/onboarding/useOnboardingStore";
 
 const STROKE_LIST = Object.entries(STROKES) as [SwimStroke, { label: string; short: string }][];
 

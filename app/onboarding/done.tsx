@@ -3,7 +3,7 @@ import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { upsertYearlyGoal } from "@/lib/queries/goals";
-import { useOnboardingStore } from "@/hooks/useOnboardingStore";
+import { useOnboardingStore } from "@/features/onboarding/useOnboardingStore";
 import { timeStringToMs } from "@/lib/utils/time";
 import { useAuth } from "@/hooks/useAuth";
 

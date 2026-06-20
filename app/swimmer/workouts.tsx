@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, ScrollView, RefreshControl, StyleSheet } from "react-native";
 import { useSwimmerContext } from "@/hooks/useSwimmerContext";
 import { getRecentWorkouts } from "@/lib/queries/swimmers";
-import { ZoneBadge } from "@/components/workout/ZoneBadge";
+import { ZoneBadge } from "@/features/workout/ZoneBadge";
 import { calcZoneDistribution } from "@/lib/utils/zones";
 import type { IntensityZone } from "@/constants/zones";
 

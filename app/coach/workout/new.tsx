@@ -4,10 +4,10 @@ import {
   Alert, TextInput, ActivityIndicator, StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { SetBuilder } from "@/components/workout/SetBuilder";
-import { DrylandForm } from "@/components/workout/DrylandForm";
-import { AttendanceList } from "@/components/workout/AttendanceList";
-import { useNewWorkoutStore } from "@/hooks/useNewWorkoutStore";
+import { SetBuilder } from "@/features/workout/SetBuilder";
+import { DrylandForm } from "@/features/workout/DrylandForm";
+import { AttendanceList } from "@/features/workout/AttendanceList";
+import { useNewWorkoutStore } from "@/features/workout/useNewWorkoutStore";
 import { useAuth } from "@/hooks/useAuth";
 import { getClubGroups, getGroupMembers } from "@/lib/queries/groups";
 import { createWorkout, addPoolSets } from "@/lib/queries/workouts";

@@ -4,7 +4,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Plus, Waves } from "lucide-react-native";
-import { SwimmerCard } from "@/components/swimmer/SwimmerCard";
+import { SwimmerCard } from "@/features/swimmer/SwimmerCard";
 import { Text } from "@/components/ui/Text";
 import { PaceClock } from "@/components/ui/PaceClock";
 import { useCoachContext } from "@/hooks/useCoachContext";
@@ -13,7 +13,7 @@ import { getClubGroups } from "@/lib/queries/groups";
 import { supabase } from "@/lib/supabase";
 import {
   type SwimmerSummary, type LensKey, LENSES, rankSwimmers, km,
-} from "@/lib/swimmer-card.lib";
+} from "@/features/swimmer/swimmer-card.lib";
 import { color, space, radius, shadow } from "@/constants/theme";
 
 function seasonProgressNow(): number {

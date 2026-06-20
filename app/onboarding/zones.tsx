@@ -1,8 +1,8 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { StepIndicator } from "@/components/onboarding/StepIndicator";
+import { StepIndicator } from "@/features/onboarding/StepIndicator";
 import { ZONES, ZONE_ORDER, type IntensityZone } from "@/constants/zones";
-import { useOnboardingStore } from "@/hooks/useOnboardingStore";
+import { useOnboardingStore } from "@/features/onboarding/useOnboardingStore";
 
 const ZONE_KEYS = {
   pk: "targetPctPk",

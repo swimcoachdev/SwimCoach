@@ -10,7 +10,7 @@ import {
   subStats,
   zoneSegments,
   trackStatus,
-} from "@/lib/swimmer-card.lib";
+} from "@/features/swimmer/swimmer-card.lib";
 
 interface Props {
   swimmer: SwimmerSummary;

@@ -1,7 +1,7 @@
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { StepIndicator } from "@/components/onboarding/StepIndicator";
-import { useOnboardingStore } from "@/hooks/useOnboardingStore";
+import { StepIndicator } from "@/features/onboarding/StepIndicator";
+import { useOnboardingStore } from "@/features/onboarding/useOnboardingStore";
 
 interface FieldProps {
   label: string;

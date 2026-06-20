@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ZoneBadge } from "@/components/workout/ZoneBadge";
+import { ZoneBadge } from "@/features/workout/ZoneBadge";
 import { ZoneDistributionChart } from "@/components/charts/ZoneDistribution";
 import { getWorkoutWithSets } from "@/lib/queries/workouts";
 import { calcZoneDistribution } from "@/lib/utils/zones";

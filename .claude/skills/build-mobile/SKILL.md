@@ -32,8 +32,8 @@ add new code in the old style.
 - **Supabase** is the backend (Postgres + Auth + RLS). The client talks to it directly via the shared
   `supabase` client (`lib/supabase.ts`) — there is no separate HTTP API.
 - **TanStack Query** (already a dependency) for **all server state**. **Zustand** only for ephemeral
-  multi-step form state (`hooks/useNewWorkoutStore.ts`, `hooks/useOnboardingStore.ts`) — never for
-  server data.
+  multi-step form state, co-located with its feature (`features/workout/useNewWorkoutStore.ts`,
+  `features/onboarding/useOnboardingStore.ts`) — never for server data.
 - **Types are generated** from the database: `npm run db:types` → `types/database.ts`. Never hand-write
   table row types; derive from the generated `Database` type.
 - **Charts:** `victory-native`. **Styling:** `StyleSheet.create` against tokens in `constants/theme.ts`
@@ -42,17 +42,27 @@ add new code in the old style.
 ## Layout
 
 ```
-app/                       # Expo Router screens (the route tree IS the file tree)
-  <area>/_layout.tsx       # stack/group layout + auth gating
+app/                       # Expo Router screens ONLY (the route tree IS the file tree —
+  <area>/_layout.tsx       #   keep non-route code out of app/, or it becomes a route)
   <area>/index.tsx         # orchestrator screen
   <area>/[id].tsx          # dynamic route, id via useLocalSearchParams
-components/<domain>/        # presentational components (SwimmerCard, charts/, workout/)
-hooks/                     # useAuth, use*Context (resolve ids), use*Store (zustand form state)
+features/<feature>/        # a feature's UI + its view-model + its local state, co-located
+  SwimmerCard.tsx          #   presentational component(s)
+  swimmer-card.lib.ts      #   pure transforms/calc/types for that feature (no react-native)
+  useNewWorkoutStore.ts    #   feature-local zustand form state (workout/onboarding)
+components/ui/             # SHARED design-system primitives (Text, Badge, PaceClock, TabIcon)
+components/charts/         # SHARED victory-native chart wrappers (used across features)
+hooks/                     # cross-cutting ONLY: useAuth, use{Coach,Swimmer}Context (resolve ids).
+                           #   feature-local stores live in features/<feature>/, not here
 lib/queries/<entity>.ts    # supabase-js query functions (one file per entity)
-lib/<entity>.lib.ts        # pure transforms/calc/types — no react, no react-native imports
-constants/                 # domain truth: zones.ts, strokes.ts, (theme.ts)
+lib/utils/*.ts             # cross-cutting pure helpers (time.ts, zones.ts) — no react-native
+constants/                 # domain truth: zones.ts, strokes.ts, theme.ts (design tokens)
 types/database.ts          # GENERATED — never hand-edit
 ```
+
+`components/` holds only **shared** code (`ui/`, `charts/`); anything specific to one feature
+lives in `features/<feature>/` alongside its view-model `*.lib.ts`. A feature's `.lib.ts` still
+imports nothing from `react-native`.
 
 ## Rules
 
@@ -68,9 +78,11 @@ types/database.ts          # GENERATED — never hand-edit
 ### Logic location
 - **No `useEffect` for derived state or data fetching.** Compute during render; fetch with TanStack
   Query. Effects are only for genuine side-effects (realtime channel lifecycle, listeners, imperative refs).
-- Pure logic, calculations, and types live in `lib/<name>.lib.ts` / `lib/utils/*` — **never** in a
-  `.tsx`, and a `*.lib.ts` imports nothing from `react-native`. The zone/time/“at risk” math is domain
-  logic and belongs there (e.g. `lib/utils/zones.ts`, `lib/utils/time.ts`), not inline in a card.
+- Pure logic, calculations, and types live in a `*.lib.ts` — feature view-models next to their
+  component (`features/<feature>/swimmer-card.lib.ts`), cross-cutting helpers in `lib/utils/*` —
+  **never** in a `.tsx`, and a `*.lib.ts` imports nothing from `react-native`. The zone/time/“at
+  risk” math is domain logic and belongs there (e.g. `lib/utils/zones.ts`, `features/swimmer/
+  swimmer-card.lib.ts`), not inline in a card.
 - No `useMemo` / `useCallback` / `React.memo` by default — add only where a measured render cost or a
   stable-reference requirement (charts, list items) genuinely needs it.
 
@@ -100,7 +112,7 @@ types/database.ts          # GENERATED — never hand-edit
 ## Build workflow
 
 1. **Scope one screen/feature** (bounded diff). Bigger → split.
-2. **Pure first.** Calculations + types into `lib/<name>.lib.ts` / `lib/utils/*`.
+2. **Pure first.** Calculations + types into the feature's `*.lib.ts` / `lib/utils/*`.
 3. **Query layer.** Add/extend `lib/queries/<entity>.ts`; expose a TanStack Query hook.
 4. **Orchestrator screen.** Read route params + context ids, compose queries, handle navigation/realtime.
 5. **Presentational children.** `props → JSX`, tokens only.

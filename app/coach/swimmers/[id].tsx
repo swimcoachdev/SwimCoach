@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { PaceClock } from "@/components/ui/PaceClock";
 import { getSwimmerProfile, getTimeProgression, getSwimmerSeasonDetail } from "@/lib/queries/swimmers";
 import { msToTimeString } from "@/lib/utils/time";
-import { km, trackStatus, type SwimmerSummary } from "@/lib/swimmer-card.lib";
+import { km, trackStatus, type SwimmerSummary } from "@/features/swimmer/swimmer-card.lib";
 import { STROKES } from "@/constants/strokes";
 import { ZONES, ZONE_ORDER } from "@/constants/zones";
 import { color, space, radius, shadow, fontFamily } from "@/constants/theme";
