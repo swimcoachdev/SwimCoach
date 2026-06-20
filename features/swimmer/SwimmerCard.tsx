@@ -13,6 +13,7 @@ import {
   subStats,
   goalPct,
   trackStatus,
+  zoneTargets,
 } from "@/features/swimmer/swimmer-card.lib";
 
 interface Props {
@@ -30,6 +31,7 @@ export function SwimmerCard({ swimmer, lens, rank, seasonProgress, onPress }: Pr
   const hero = heroFor(lens, swimmer);
   const track = trackStatus(swimmer, seasonProgress);
   const hasGoal = (swimmer.target_pool_m ?? 0) > 0;
+  const zoneTarget = zoneTargets(swimmer);
   const heroLens = lens === "name" ? "goal" : lens;
   const heroLabel = LENSES.find((l) => l.key === heroLens)?.label ?? "";
   const rows = subStats(swimmer, lens).filter((st) => !st.active);
@@ -64,7 +66,7 @@ export function SwimmerCard({ swimmer, lens, rank, seasonProgress, onPress }: Pr
         </View>
         <Text variant="caption">{hero.caption}</Text>
         {/* A bar that visualizes the hero, anchored right under it (lens-specific) */}
-        {heroLens === "goal" && hasGoal && (
+        {(heroLens === "goal" || heroLens === "volume") && hasGoal && (
           <PaceBar
             pct={goalPct(swimmer)}
             markerPct={Math.round(seasonProgress * 100)}
@@ -74,6 +76,9 @@ export function SwimmerCard({ swimmer, lens, rank, seasonProgress, onPress }: Pr
         )}
         {heroLens === "workouts" && (
           <ZoneBar weights={actualZones(swimmer)} style={styles.heroBar} />
+        )}
+        {heroLens === "teho" && zoneTarget && (
+          <ZoneBar weights={actualZones(swimmer)} targets={zoneTarget} style={styles.heroBar} />
         )}
       </View>
 

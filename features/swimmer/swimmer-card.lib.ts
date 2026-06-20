@@ -86,6 +86,15 @@ export function tehoScore(s: SwimmerSummary): number | null {
   return Math.max(0, round(100 - deviation / 2));
 }
 
+/** Planned zone split (% per zone) from this summary's targets, or null when none are set. */
+export function zoneTargets(s: SwimmerSummary): Record<IntensityZone, number> | null {
+  if (!ZONE_ORDER.some((z) => s[TARGET_PCT[z]] != null)) return null;
+  return ZONE_ORDER.reduce(
+    (acc, z) => ({ ...acc, [z]: n(s[TARGET_PCT[z]] as number) }),
+    {} as Record<IntensityZone, number>,
+  );
+}
+
 /* ── Adaptive hero ────────────────────────────────────────────────────────────── */
 
 export interface HeroValue {
