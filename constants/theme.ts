@@ -153,6 +153,8 @@ export const type = {
   hero: { fontFamily: fontFamily.displayHeavy, fontSize: 52, lineHeight: 52, letterSpacing: -0.5, color: color.ink, ...tabular },
   display: { fontFamily: fontFamily.display, fontSize: 34, lineHeight: 36, letterSpacing: -0.3, color: color.ink, ...tabular },
   title: { fontFamily: fontFamily.bold, fontSize: 22, lineHeight: 28, color: color.ink },
+  /** Section header — the middle tier between the screen title and a field label. */
+  subtitle: { fontFamily: fontFamily.bold, fontSize: 18, lineHeight: 24, letterSpacing: -0.2, color: color.ink },
   heading: { fontFamily: fontFamily.semibold, fontSize: 16, lineHeight: 22, color: color.ink },
   body: { fontFamily: fontFamily.body, fontSize: 15, lineHeight: 22, color: color.ink },
   bodyStrong: { fontFamily: fontFamily.semibold, fontSize: 15, lineHeight: 22, color: color.ink },

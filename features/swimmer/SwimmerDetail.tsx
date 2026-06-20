@@ -94,7 +94,7 @@ export function SwimmerDetail({ profile, summary, progression, year, seasonProgr
         {/* Mitä seuraavaksi — deterministic insight */}
         {insights.length > 0 && (
           <Card>
-            <SectionLabel>Mitä seuraavaksi</SectionLabel>
+            <SectionHeader>Mitä seuraavaksi</SectionHeader>
             {insights.map((it, i) => (
               <View key={i} style={styles.insightRow}>
                 <View style={[styles.insightDot, { backgroundColor: TONE_COLOR[it.tone] }]} />
@@ -106,7 +106,7 @@ export function SwimmerDetail({ profile, summary, progression, year, seasonProgr
 
         {/* Harjoittelu — frequency, plan adherence, zone split */}
         <Card>
-          <SectionLabel>Harjoittelu</SectionLabel>
+          <SectionHeader>Harjoittelu</SectionHeader>
           <View style={styles.statRow}>
             <Stat label="Harjoitukset" value={targetWorkouts > 0 ? `${workouts} / ${targetWorkouts}` : String(workouts)} />
             <Stat label="Teho-osuvuus" value={teho == null ? "–" : `${teho} %`} />
@@ -121,7 +121,7 @@ export function SwimmerDetail({ profile, summary, progression, year, seasonProgr
         {/* Kilpailut — one line per event: goal · PR · season trend */}
         {races.length > 0 && (
           <Card>
-            <SectionLabel>Kilpailut</SectionLabel>
+            <SectionHeader>Kilpailut</SectionHeader>
             {races.map((r, i) => (
               <View key={r.key} style={[styles.raceRow, i < races.length - 1 && styles.raceRowBorder]}>
                 <View style={styles.flex}>
@@ -148,9 +148,14 @@ export function SwimmerDetail({ profile, summary, progression, year, seasonProgr
   );
 }
 
-/** A consistent uppercase section header, echoing the hero's eyebrow but in ink. */
-function SectionLabel({ children }: { children: string }) {
-  return <Text variant="label" color={color.ink} style={styles.sectionLabel}>{children}</Text>;
+/** The section-header tier: sentence-case, bold, with a hairline rule for structure. */
+function SectionHeader({ children }: { children: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text variant="subtitle">{children}</Text>
+      <View style={styles.sectionRule} />
+    </View>
+  );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -192,7 +197,8 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { padding: space.lg, gap: space.md, paddingBottom: space.xxxl },
   flex: { flex: 1 },
-  sectionLabel: { marginBottom: space.md },
+  sectionHeader: { marginBottom: space.md },
+  sectionRule: { height: StyleSheet.hairlineWidth, backgroundColor: color.border, marginTop: space.sm },
 
   heroRow: { flexDirection: "row", alignItems: "baseline", gap: space.xs, marginTop: space.xs },
   heroUnit: { transform: [{ translateY: -2 }] },
