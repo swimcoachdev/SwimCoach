@@ -6,6 +6,7 @@
  * `SwimmerSummary`.
  */
 import type { IntensityZone } from "@/constants/zones";
+import { STROKES } from "@/constants/strokes";
 
 export interface PersonalRecord {
   id: string;
@@ -109,4 +110,64 @@ export function targetZones(goal: YearlyGoal | undefined): ZoneRecord | undefine
 /** The yearly goal for `year`, if the swimmer has one. */
 export function goalForYear(profile: SwimmerProfile, year: number): YearlyGoal | undefined {
   return profile.yearly_goals?.find((g) => g.season_year === year);
+}
+
+/** One race event for the detail page, merging the goal, the PR and the season trend. */
+export interface RaceLine {
+  key: string;
+  /** "100m Perhonen" — distance + the stroke's label, never the raw code. */
+  label: string;
+  /** Personal best in ms, or null when only a goal/trend exists. */
+  prMs: number | null;
+  /** Net season improvement in ms (positive = faster), or null. */
+  improvedMs: number | null;
+  /** This is the swimmer's goal event. */
+  isGoal: boolean;
+  /** Goal time in ms when this is the goal event. */
+  targetMs: number | null;
+}
+
+const raceLabel = (distance: string, stroke: string) =>
+  `${distance}m ${STROKES[stroke as keyof typeof STROKES]?.label ?? stroke}`;
+
+/**
+ * Collapse the three race views (yearly goal · PRs · competition progression)
+ * into one event-keyed list so an event the swimmer focuses on shows once, not
+ * three times. Goal event first.
+ */
+export function raceLines(
+  prs: PersonalRecord[],
+  goal: YearlyGoal | undefined,
+  events: ProgressionEvent[],
+): RaceLine[] {
+  const byKey = new Map<string, RaceLine>();
+  const key = (distance: string, stroke: string) => `${distance}|${stroke}`;
+  const ensure = (distance: string, stroke: string): RaceLine => {
+    const k = key(distance, stroke);
+    let line = byKey.get(k);
+    if (!line) {
+      line = { key: k, label: raceLabel(distance, stroke), prMs: null, improvedMs: null, isGoal: false, targetMs: null };
+      byKey.set(k, line);
+    }
+    return line;
+  };
+
+  for (const pr of prs) {
+    const line = ensure(pr.distance, pr.stroke);
+    if (line.prMs == null || pr.best_time_ms < line.prMs) line.prMs = pr.best_time_ms;
+  }
+
+  for (const ev of events) {
+    const first = ev.results[0];
+    if (!first) continue;
+    ensure(first.distance, first.stroke).improvedMs = ev.improvedMs;
+  }
+
+  if (goal?.target_stroke && goal.target_distance) {
+    const line = ensure(goal.target_distance, goal.target_stroke);
+    line.isGoal = true;
+    line.targetMs = goal.target_time_ms;
+  }
+
+  return [...byKey.values()].sort((a, b) => Number(b.isGoal) - Number(a.isGoal));
 }
