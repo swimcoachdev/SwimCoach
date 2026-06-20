@@ -68,33 +68,52 @@ BEGIN
     (s4, 2026, 600, 40, 95, 70, 15, 12, 3, 'vapaa', '400', 245000),
     (s5, 2026, 540, 34, 90, 62, 20, 13, 5, 'vapaa', '200', 130000);
 
-  -- ── Workouts: every 3 days Jan→mid-Jun 2026, with a standard zone split ──
+  -- ── Workouts: every 3 days Jan→mid-Jun 2026 (~54 sessions) ──────────
   INSERT INTO workouts (club_id, coach_id, group_id, workout_date, workout_type, title)
   SELECT v_club, v_coach, v_group, d::date, 'uinti', 'Allasharjoitus'
   FROM generate_series('2026-01-06'::date, '2026-06-15'::date, interval '3 days') d;
 
-  -- Pool sets per workout: PK 3000 / VK 800 / MK 600 / MAK 400  (= 4800 m, PK≈62%)
+  -- Each session rotates (by date order) through one of three zone profiles, so a
+  -- swimmer's actual split depends on *which* sessions they attend — not a constant:
+  --   p0 perus (PK-painotteinen) · p1 kynnys (VK/MK) · p2 vauhti (MAK)
+  -- Sets: 1 PK · 2 VK · 3 MK · 4 MAK   (totals: p0 4800 / p1 5000 / p2 4800 m)
+  WITH w AS (SELECT id, (row_number() OVER (ORDER BY workout_date)) % 3 AS p FROM workouts WHERE club_id = v_club)
   INSERT INTO pool_sets (workout_id, set_order, repetitions, distance_m, stroke, intensity_zone)
-  SELECT w.id, 1, 12, 250, 'vapaa', 'pk'  FROM workouts w WHERE w.club_id = v_club;
+  SELECT id, 1, CASE p WHEN 0 THEN 12 WHEN 1 THEN 13 ELSE 11 END,
+                CASE p WHEN 0 THEN 300 ELSE 200 END, 'vapaa', 'pk' FROM w;
+  WITH w AS (SELECT id, (row_number() OVER (ORDER BY workout_date)) % 3 AS p FROM workouts WHERE club_id = v_club)
   INSERT INTO pool_sets (workout_id, set_order, repetitions, distance_m, stroke, intensity_zone)
-  SELECT w.id, 2,  8, 100, 'vapaa', 'vk'  FROM workouts w WHERE w.club_id = v_club;
+  SELECT id, 2, CASE p WHEN 0 THEN 6 WHEN 1 THEN 13 ELSE 8 END, 100, 'vapaa', 'vk' FROM w;
+  WITH w AS (SELECT id, (row_number() OVER (ORDER BY workout_date)) % 3 AS p FROM workouts WHERE club_id = v_club)
   INSERT INTO pool_sets (workout_id, set_order, repetitions, distance_m, stroke, intensity_zone)
-  SELECT w.id, 3,  6, 100, 'sekauinti', 'mk' FROM workouts w WHERE w.club_id = v_club;
+  SELECT id, 3, CASE p WHEN 0 THEN 4 WHEN 1 THEN 9 ELSE 8 END, 100, 'sekauinti', 'mk' FROM w;
+  WITH w AS (SELECT id, (row_number() OVER (ORDER BY workout_date)) % 3 AS p FROM workouts WHERE club_id = v_club)
   INSERT INTO pool_sets (workout_id, set_order, repetitions, distance_m, stroke, intensity_zone)
-  SELECT w.id, 4,  8,  50, 'vapaa', 'mak' FROM workouts w WHERE w.club_id = v_club;
+  SELECT id, 4, CASE p WHEN 0 THEN 4 WHEN 1 THEN 4 ELSE 20 END, 50, 'vapaa', 'mak' FROM w;
 
-  -- ── Attendance: vary #sessions per swimmer → spread of goal % ───────
-  -- Emilia 55, Sanna 52, Venla 50, Aleksi 46, Mikael 24 (at risk)
+  -- ── Attendance: each swimmer favours different session types, so their actual
+  -- zone mix diverges (not just their volume). LIMIT drives the goal-% spread;
+  -- the profile filter drives the zone-mix skew.
+  --   Emilia: all types, high volume → ahead of pace, balanced mix
+  --   Aleksi: perus + kynnys        → PK-heavy, little MAK
+  --   Sanna:  kynnys + vauhti       → quality-heavy, low PK
+  --   Venla:  perus + vauhti        → MAK-heavy
+  --   Mikael: perus only, few       → at risk, very PK-heavy
+  WITH w AS (SELECT id, workout_date, (row_number() OVER (ORDER BY workout_date)) % 3 AS p FROM workouts WHERE club_id = v_club)
   INSERT INTO workout_attendance (workout_id, swimmer_id, actual_pool_m, felt_scale)
-    SELECT id, s1, 4800, 7 FROM workouts WHERE club_id=v_club ORDER BY workout_date LIMIT 55;
+    SELECT id, s1, 5400, 7 FROM w ORDER BY workout_date LIMIT 54;
+  WITH w AS (SELECT id, workout_date, (row_number() OVER (ORDER BY workout_date)) % 3 AS p FROM workouts WHERE club_id = v_club)
   INSERT INTO workout_attendance (workout_id, swimmer_id, actual_pool_m, felt_scale)
-    SELECT id, s3, 4800, 8 FROM workouts WHERE club_id=v_club ORDER BY workout_date LIMIT 52;
+    SELECT id, s4, 5400, 6 FROM w WHERE p IN (0,1) ORDER BY workout_date LIMIT 36;
+  WITH w AS (SELECT id, workout_date, (row_number() OVER (ORDER BY workout_date)) % 3 AS p FROM workouts WHERE club_id = v_club)
   INSERT INTO workout_attendance (workout_id, swimmer_id, actual_pool_m, felt_scale)
-    SELECT id, s5, 4800, 7 FROM workouts WHERE club_id=v_club ORDER BY workout_date LIMIT 50;
+    SELECT id, s3, 5000, 8 FROM w WHERE p IN (1,2) ORDER BY workout_date LIMIT 34;
+  WITH w AS (SELECT id, workout_date, (row_number() OVER (ORDER BY workout_date)) % 3 AS p FROM workouts WHERE club_id = v_club)
   INSERT INTO workout_attendance (workout_id, swimmer_id, actual_pool_m, felt_scale)
-    SELECT id, s4, 5400, 6 FROM workouts WHERE club_id=v_club ORDER BY workout_date LIMIT 46;
+    SELECT id, s5, 4800, 7 FROM w WHERE p IN (0,2) ORDER BY workout_date LIMIT 30;
+  WITH w AS (SELECT id, workout_date, (row_number() OVER (ORDER BY workout_date)) % 3 AS p FROM workouts WHERE club_id = v_club)
   INSERT INTO workout_attendance (workout_id, swimmer_id, actual_pool_m, felt_scale)
-    SELECT id, s2, 4200, 5 FROM workouts WHERE club_id=v_club ORDER BY workout_date LIMIT 24;
+    SELECT id, s2, 4200, 5 FROM w WHERE p = 0 ORDER BY workout_date LIMIT 18;
 
   -- ── Competitions + results + baseline PRs (shows improvement) ───────
   INSERT INTO competitions (club_id, name, competition_date, location, level)
