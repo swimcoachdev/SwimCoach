@@ -11,6 +11,7 @@ import {
   goalForYear,
   groupProgression,
   raceLines,
+  targetZones,
   type ProgressionRow,
   type SwimmerProfile,
   type ZoneRecord,
@@ -112,7 +113,7 @@ export function SwimmerDetail({ profile, summary, progression, year, seasonProgr
             <Stat label="Teho-osuvuus" value={teho == null ? "–" : `${teho} %`} />
           </View>
           {hasZoneData ? (
-            <ZoneBar actual={actualZones(summary)} />
+            <ZonePlan actual={actualZones(summary)} target={targetZones(goal)} />
           ) : (
             <Text variant="body" color={color.inkMuted}>Ei harjoitusdataa vielä.</Text>
           )}
@@ -167,7 +168,8 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ZoneBar({ actual }: { actual: ZoneRecord }) {
+/** The zone heat-ramp over a per-zone actual-vs-plan table (the diff is the per-swimmer signal). */
+function ZonePlan({ actual, target }: { actual: ZoneRecord; target?: ZoneRecord }) {
   const total = ZONE_ORDER.reduce((s, z) => s + (actual[z] ?? 0), 0);
   return (
     <View>
@@ -177,14 +179,23 @@ function ZoneBar({ actual }: { actual: ZoneRecord }) {
           return w > 0 ? <View key={z} style={[styles.zoneSegment, { flex: w, backgroundColor: ZONES[z].color }]} /> : null;
         })}
       </View>
-      <View style={styles.zoneLegend}>
+      <View style={styles.zonePlan}>
         {ZONE_ORDER.map((z) => {
           const p = total > 0 ? Math.round((actual[z] ?? 0) / total * 100) : 0;
+          const tgt = target?.[z];
+          const diff = tgt != null ? p - tgt : null;
+          const diffColor = diff == null ? color.inkFaint : Math.abs(diff) <= 3 ? color.good : diff < 0 ? color.risk : color.warn;
           return (
-            <View key={z} style={styles.zoneLegendItem}>
+            <View key={z} style={styles.zonePlanRow}>
               <View style={[styles.zoneDot, { backgroundColor: ZONES[z].color }]} />
-              <Text variant="caption" color={color.inkMuted}>{ZONES[z].label}</Text>
-              <Text variant="caption" color={color.ink} style={styles.zonePct}>{p}%</Text>
+              <Text variant="caption" color={color.ink} style={styles.zonePlanLabel}>{ZONES[z].label}</Text>
+              <Text variant="bodyStrong" style={styles.zonePlanActual}>{p}%</Text>
+              <Text variant="caption" color={color.inkMuted} style={styles.zonePlanTarget}>
+                {tgt != null ? `tavoite ${tgt}%` : ""}
+              </Text>
+              {diff != null && (
+                <Text variant="label" color={diffColor} style={styles.zonePlanDiff}>{diff > 0 ? "+" : ""}{diff}</Text>
+              )}
             </View>
           );
         })}
@@ -215,10 +226,13 @@ const styles = StyleSheet.create({
 
   zoneBarRow: { flexDirection: "row", height: 10, borderRadius: radius.pill, overflow: "hidden", marginBottom: space.md, gap: 1.5 },
   zoneSegment: { height: 10 },
-  zoneLegend: { flexDirection: "row", justifyContent: "space-between" },
-  zoneLegendItem: { flexDirection: "row", alignItems: "center", gap: space.xs },
   zoneDot: { width: 8, height: 8, borderRadius: 4 },
-  zonePct: { fontFamily: fontFamily.semibold, color: color.ink },
+  zonePlan: { gap: space.xs + 2 },
+  zonePlanRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  zonePlanLabel: { width: 34, color: color.ink, fontFamily: fontFamily.semibold },
+  zonePlanActual: { width: 44 },
+  zonePlanTarget: { flex: 1 },
+  zonePlanDiff: { width: 28, textAlign: "right" },
 
   raceRow: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md },
   raceRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
