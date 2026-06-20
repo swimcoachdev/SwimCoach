@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRouter } from "expo-router";
 import { Screen } from "@/components/ui/Screen";
 import { ScreenState } from "@/components/ui/ScreenState";
-import { RosterScreen } from "@/features/swimmer/RosterScreen";
+import { RosterScreen, type RosterDensity } from "@/features/swimmer/RosterScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { useCoachContext } from "@/hooks/useCoachContext";
 import { useSeasonSummary } from "@/lib/queries/swimmers";
@@ -19,6 +19,8 @@ export default function CoachDashboard() {
 
   const [lens, setLens] = useState<LensKey>("goal");
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [density, setDensity] = useState<RosterDensity>("cards");
 
   const summaryQ = useSeasonSummary(clubId ?? undefined, year);
   const groupsQ = useClubGroups(clubId ?? undefined);
@@ -34,6 +36,10 @@ export default function CoachDashboard() {
             onLens={setLens}
             selectedGroup={selectedGroup}
             onSelectGroup={setSelectedGroup}
+            search={search}
+            onSearch={setSearch}
+            density={density}
+            onDensity={setDensity}
             seasonProgress={progress}
             refreshing={summaryQ.isRefetching}
             onRefresh={() => summaryQ.refetch()}

@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { StyleSheet } from "react-native";
-import { LayoutGrid, Users, Plus, Trophy, Sparkles } from "lucide-react-native";
+import { Home, Plus, Trophy, Sparkles } from "lucide-react-native";
 import { TabIcon } from "@/components/ui/TabIcon";
 import { color } from "@/constants/theme";
 
@@ -23,9 +23,7 @@ export default function CoachLayout() {
       }}
     >
       <Tabs.Screen name="index"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon icon={LayoutGrid} label="Ryhmä" focused={focused} /> }} />
-      <Tabs.Screen name="swimmers"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon icon={Users} label="Uimarit" focused={focused} /> }} />
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon={Home} label="Koti" focused={focused} /> }} />
       <Tabs.Screen name="workout/new"
         options={{ tabBarIcon: ({ focused }) => <TabIcon icon={Plus} label="Harjoitus" focused={focused} /> }} />
       <Tabs.Screen name="competitions"
