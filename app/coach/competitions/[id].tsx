@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
   TextInput, ActivityIndicator, Modal, StyleSheet
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getCompetitionWithResults, upsertCompetitionResult, updatePersonalRecord } from "@/lib/queries/competitions";
-import { getSwimmerSeasonSummary } from "@/lib/queries/swimmers";
+import { useCompetitionDetail, useSaveCompetitionResult } from "@/lib/queries/competitions";
+import { useSeasonSummary } from "@/lib/queries/swimmers";
+import { groupResultsBySwimmer } from "@/features/competition/competitions.lib";
 import { useCoachContext } from "@/hooks/useCoachContext";
 import { timeStringToMs, msToTimeString } from "@/lib/utils/time";
 import { STROKES, RACE_DISTANCES, type SwimStroke, type RaceDistance } from "@/constants/strokes";
@@ -25,25 +26,18 @@ export default function CompetitionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { clubId } = useCoachContext();
+  const year = new Date().getFullYear();
 
-  const [competition, setCompetition] = useState<any>(null);
-  const [swimmers, setSwimmers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const competitionQ = useCompetitionDetail(id);
+  const swimmersQ = useSeasonSummary(clubId ?? undefined, year);
+  const saveResultMutation = useSaveCompetitionResult();
+
+  const competition = competitionQ.data;
+  const swimmers = swimmersQ.data ?? [];
 
   const [modalVisible, setModalVisible] = useState(false);
   const [entry, setEntry] = useState<Partial<ResultEntry>>({ stroke: "vapaa", distance: 100, timeString: "" });
-  const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-
-  useEffect(() => {
-    if (!id) return;
-    Promise.all([
-      getCompetitionWithResults(id).then(({ data }) => setCompetition(data)),
-      clubId
-        ? getSwimmerSeasonSummary(clubId).then(({ data }) => setSwimmers(data ?? []))
-        : Promise.resolve(),
-    ]).finally(() => setLoading(false));
-  }, [id, clubId]);
 
   function openModal(swimmerId?: string, swimmerName?: string) {
     setEntry({ swimmerId, swimmerName, stroke: "vapaa", distance: 100, timeString: "", placeOverall: "" });
@@ -57,47 +51,33 @@ export default function CompetitionDetailScreen() {
     }
     const timeMs = timeStringToMs(entry.timeString);
     if (timeMs <= 0) { setSaveError("Tarkista aika-formaatti (esim. 1:02.45)"); return; }
+    if (!competition) return;
 
-    setSaving(true);
     setSaveError("");
     try {
-      await upsertCompetitionResult({
-        competition_id: id!,
-        swimmer_id: entry.swimmerId!,
+      await saveResultMutation.mutateAsync({
+        competitionId: id!,
+        competitionDate: competition.competition_date,
+        swimmerId: entry.swimmerId,
         stroke: entry.stroke!,
         distance: String(entry.distance),
-        result_time_ms: timeMs,
-        place_overall: entry.placeOverall ? parseInt(entry.placeOverall) : undefined,
+        resultTimeMs: timeMs,
+        placeOverall: entry.placeOverall ? parseInt(entry.placeOverall) : undefined,
       });
-
-      await updatePersonalRecord(
-        entry.swimmerId!, entry.stroke!, String(entry.distance),
-        timeMs, competition.competition_date, id!
-      );
-
-      const { data } = await getCompetitionWithResults(id!);
-      setCompetition(data);
       setModalVisible(false);
-    } catch (e: any) {
-      setSaveError(e?.message ?? "Tallennus epäonnistui");
-    } finally {
-      setSaving(false);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Tallennus epäonnistui");
     }
   }
 
-  if (loading) return (
+  if (competitionQ.isLoading || !competition) return (
     <View style={s.center}>
       <ActivityIndicator size="large" color="#0EA5E9" />
     </View>
   );
 
-  const results = competition?.competition_results ?? [];
-  const bySwimmer: Record<string, { name: string; results: any[] }> = {};
-  for (const r of results) {
-    const sid = r.swimmer_id;
-    if (!bySwimmer[sid]) bySwimmer[sid] = { name: r.swimmers?.full_name ?? "—", results: [] };
-    bySwimmer[sid].results.push(r);
-  }
+  const results = competition.competition_results ?? [];
+  const bySwimmer = groupResultsBySwimmer(results);
 
   return (
     <View style={s.screen}>
@@ -142,16 +122,16 @@ export default function CompetitionDetailScreen() {
         )}
 
         {/* Tulokset */}
-        {Object.keys(bySwimmer).length === 0 ? (
+        {bySwimmer.length === 0 ? (
           <View style={s.empty}>
             <Text style={s.emptyEmoji}>📋</Text>
             <Text style={s.emptyText}>Ei tuloksia vielä. Lisää ensimmäinen tulos yllä.</Text>
           </View>
         ) : (
-          Object.entries(bySwimmer).map(([sid, { name, results: sResults }]) => (
+          bySwimmer.map(({ swimmerId: sid, name, results: sResults }) => (
             <View key={sid} style={s.card}>
               <Text style={s.cardName}>{name}</Text>
-              {sResults.map((r: any) => {
+              {sResults.map((r) => {
                 const isPR = r.is_personal_best;
                 const label = r.distance + "m " + (STROKES[r.stroke as SwimStroke]?.short ?? r.stroke);
                 return (
@@ -268,9 +248,9 @@ export default function CompetitionDetailScreen() {
             <TouchableOpacity
               style={[s.saveBtn, (!entry.swimmerId || !entry.timeString) && s.saveBtnDisabled]}
               onPress={saveResult}
-              disabled={saving || !entry.swimmerId || !entry.timeString}
+              disabled={saveResultMutation.isPending || !entry.swimmerId || !entry.timeString}
             >
-              {saving
+              {saveResultMutation.isPending
                 ? <ActivityIndicator color="#fff" />
                 : <Text style={[s.saveBtnText, (!entry.swimmerId || !entry.timeString) && s.saveBtnTextDisabled]}>
                     Tallenna tulos

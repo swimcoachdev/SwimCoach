@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rosterStats } from "./roster.lib";
+import { filterRoster, rosterStats } from "./roster.lib";
 import type { SwimmerSummary } from "./swimmer-card.lib";
 
 /** Minimal valid summary row; override only the fields a case cares about. */
@@ -46,5 +46,20 @@ describe("rosterStats", () => {
     ]);
     expect(r.totalKm).toBe(50);
     expect(r.avgGoalPct).toBe(50);
+  });
+});
+
+describe("filterRoster", () => {
+  const roster = [
+    swimmer({ swimmer_id: "1", full_name: "Aino Virtanen" }),
+    swimmer({ swimmer_id: "2", full_name: "Veikko Mäki" }),
+  ];
+
+  it("returns everyone for an empty query", () => {
+    expect(filterRoster(roster, "  ")).toHaveLength(2);
+  });
+
+  it("matches names case-insensitively", () => {
+    expect(filterRoster(roster, "veik").map((s) => s.swimmer_id)).toEqual(["2"]);
   });
 });

@@ -1,17 +1,16 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Alert, TextInput, ActivityIndicator, StyleSheet,
+  TextInput, ActivityIndicator, StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SetBuilder } from "@/features/workout/SetBuilder";
 import { DrylandForm } from "@/features/workout/DrylandForm";
 import { AttendanceList } from "@/features/workout/AttendanceList";
 import { useNewWorkoutStore } from "@/features/workout/useNewWorkoutStore";
-import { useAuth } from "@/hooks/useAuth";
-import { getClubGroups, getGroupMembers } from "@/lib/queries/groups";
-import { createWorkout, addPoolSets } from "@/lib/queries/workouts";
-import { supabase } from "@/lib/supabase";
+import { useCoachContext } from "@/hooks/useCoachContext";
+import { useClubGroups, getGroupMembers } from "@/lib/queries/groups";
+import { useSaveWorkout } from "@/lib/queries/workouts";
 
 type Step = "sets" | "dryland" | "attendance" | "confirm";
 const STEPS: { key: Step; label: string }[] = [
@@ -23,32 +22,17 @@ const STEPS: { key: Step; label: string }[] = [
 
 export default function NewWorkoutScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { clubId, coachId } = useCoachContext();
   const store = useNewWorkoutStore();
+  const saveWorkout = useSaveWorkout();
 
   const [step, setStep] = useState<Step>("sets");
-  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
-  const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [clubId, setClubId] = useState("");
-  const [coachId, setCoachId] = useState("");
 
+  const groupsQ = useClubGroups(clubId ?? undefined);
+  const groups = groupsQ.data ?? [];
   const totalPoolM = store.sets.reduce((s, e) => s + e.repetitions * e.distance_m, 0);
   const stepIdx = STEPS.findIndex(s => s.key === step);
-
-  useEffect(() => {
-    async function init() {
-      if (!user) return;
-      const { data: u } = await supabase.from("users").select("club_id").eq("id", user.id).single();
-      if (!u) return;
-      setClubId(u.club_id);
-      const { data: c } = await supabase.from("coaches").select("id").eq("user_id", user.id).single();
-      if (c) setCoachId(c.id);
-      const { data: g } = await getClubGroups(u.club_id);
-      if (g) setGroups(g);
-    }
-    init();
-  }, [user]);
 
   async function selectGroup(gid: string) {
     store.setGroupId(gid);
@@ -66,49 +50,41 @@ export default function NewWorkoutScreen() {
 
   async function save() {
     if (store.sets.length === 0) { setSaveError("Lisää vähintään yksi setti."); return; }
+    if (!clubId) { setSaveError("Seuraa ei löytynyt."); return; }
     setSaveError("");
-    setSaving(true);
     try {
-      const { data: workout, error } = await createWorkout({
-        club_id: clubId,
-        coach_id: coachId || undefined,
-        group_id: store.group_id || undefined,
-        workout_date: store.date,
-        workout_type: store.dryland ? (totalPoolM > 0 ? "yhdistelma" : "kuiva") : "uinti",
-        title: store.notes || undefined,
+      await saveWorkout.mutateAsync({
+        workout: {
+          club_id: clubId,
+          coach_id: coachId ?? undefined,
+          group_id: store.group_id || undefined,
+          workout_date: store.date,
+          workout_type: store.dryland ? (totalPoolM > 0 ? "yhdistelma" : "kuiva") : "uinti",
+          title: store.notes || undefined,
+        },
+        sets: store.sets.map((s, i) => ({
+          set_order: i + 1,
+          repetitions: s.repetitions,
+          distance_m: s.distance_m,
+          stroke: s.stroke,
+          intensity_zone: s.intensity_zone,
+          description: s.description,
+        })),
+        dryland: store.dryland
+          ? {
+              duration_min: store.dryland.duration_min,
+              category: store.dryland.category,
+              description: store.dryland.description,
+            }
+          : undefined,
+        attendance: store.attendees
+          .filter((a) => a.present)
+          .map((a) => ({ swimmer_id: a.swimmer_id, actual_pool_m: a.actual_pool_m ?? totalPoolM })),
       });
-      if (error || !workout) throw error;
-
-      await addPoolSets(store.sets.map((s, i) => ({
-        workout_id: workout.id, set_order: i + 1,
-        repetitions: s.repetitions, distance_m: s.distance_m,
-        stroke: s.stroke, intensity_zone: s.intensity_zone,
-        description: s.description,
-      })));
-
-      if (store.dryland) {
-        await supabase.from("dryland_sessions").insert({
-          workout_id: workout.id, duration_min: store.dryland.duration_min,
-          category: store.dryland.category, description: store.dryland.description,
-        });
-      }
-
-      const present = store.attendees.filter(a => a.present);
-      if (present.length > 0) {
-        await supabase.from("workout_attendance").insert(
-          present.map(a => ({
-            workout_id: workout.id, swimmer_id: a.swimmer_id,
-            actual_pool_m: a.actual_pool_m ?? totalPoolM,
-          }))
-        );
-      }
-
       store.reset();
       router.replace("/coach");
-    } catch (e: any) {
-      setSaveError(e?.message ?? "Tallennus epäonnistui.");
-    } finally {
-      setSaving(false);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Tallennus epäonnistui.");
     }
   }
 
@@ -245,8 +221,8 @@ export default function NewWorkoutScreen() {
             {saveError ? (
               <View style={s.errorBox}><Text style={s.errorText}>{saveError}</Text></View>
             ) : null}
-            <TouchableOpacity style={s.saveBtn} onPress={save} disabled={saving}>
-              {saving
+            <TouchableOpacity style={s.saveBtn} onPress={save} disabled={saveWorkout.isPending}>
+              {saveWorkout.isPending
                 ? <ActivityIndicator color="white" />
                 : <Text style={s.saveBtnText}>💾 Tallenna harjoitus</Text>
               }

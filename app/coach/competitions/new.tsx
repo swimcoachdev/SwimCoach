@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useCoachContext } from "@/hooks/useCoachContext";
-import { createCompetition } from "@/lib/queries/competitions";
+import { useCreateCompetition } from "@/lib/queries/competitions";
 
 const BRAND = "#0EA5E9";
 const LEVELS = ["seura", "piiri", "SM", "kansainvälinen"];
@@ -10,24 +10,27 @@ const LEVELS = ["seura", "piiri", "SM", "kansainvälinen"];
 export default function NewCompetitionScreen() {
   const router = useRouter();
   const { clubId } = useCoachContext();
+  const createCompetition = useCreateCompetition();
+
   const [name, setName]         = useState("");
   const [date, setDate]         = useState(new Date().toISOString().split("T")[0]);
   const [location, setLocation] = useState("");
   const [level, setLevel]       = useState("seura");
-  const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState("");
 
   async function save() {
     if (!name.trim()) { setError("Syötä kilpailun nimi."); return; }
     if (!clubId) { setError("Seura ei löydy."); return; }
-    setError(""); setSaving(true);
-    const { data, error: err } = await createCompetition({
-      club_id: clubId, name: name.trim(), competition_date: date,
-      location: location.trim() || undefined, level,
-    });
-    setSaving(false);
-    if (err) { setError(err.message); return; }
-    router.replace(`/coach/competitions/${data.id}`);
+    setError("");
+    try {
+      const created = await createCompetition.mutateAsync({
+        club_id: clubId, name: name.trim(), competition_date: date,
+        location: location.trim() || undefined, level,
+      });
+      router.replace(`/coach/competitions/${created.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Tallennus epäonnistui.");
+    }
   }
 
   return (
@@ -48,7 +51,7 @@ export default function NewCompetitionScreen() {
 
       <Text style={s.label}>Taso</Text>
       <View style={s.levelRow}>
-        {LEVELS.map(l => (
+        {LEVELS.map((l) => (
           <TouchableOpacity key={l} style={[s.levelBtn, level === l && s.levelBtnActive]} onPress={() => setLevel(l)}>
             <Text style={[s.levelBtnText, level === l && s.levelBtnTextActive]}>{l}</Text>
           </TouchableOpacity>
@@ -57,8 +60,8 @@ export default function NewCompetitionScreen() {
 
       {error ? <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View> : null}
 
-      <TouchableOpacity style={s.saveBtn} onPress={save} disabled={saving}>
-        <Text style={s.saveBtnText}>{saving ? "Luodaan..." : "Luo kilpailu → syötä tulokset"}</Text>
+      <TouchableOpacity style={s.saveBtn} onPress={save} disabled={createCompetition.isPending}>
+        <Text style={s.saveBtnText}>{createCompetition.isPending ? "Luodaan..." : "Luo kilpailu → syötä tulokset"}</Text>
       </TouchableOpacity>
     </ScrollView>
   );

@@ -22,3 +22,10 @@ export function rosterStats(swimmers: SwimmerSummary[]): RosterStats {
   const avgGoalPct = Math.round(swimmers.reduce((sum, s) => sum + goalPct(s), 0) / count);
   return { totalKm: km(totalM), avgGoalPct, count };
 }
+
+/** Case-insensitive name search over a roster. Empty query → unchanged. */
+export function filterRoster(swimmers: SwimmerSummary[], query: string): SwimmerSummary[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return swimmers;
+  return swimmers.filter((s) => s.full_name.toLowerCase().includes(q));
+}
