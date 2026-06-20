@@ -1,10 +1,18 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet } from "react-native";
+import { View, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { X } from "lucide-react-native";
+import { Screen } from "@/components/ui/Screen";
+import { Text } from "@/components/ui/Text";
+import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
+import { Field } from "@/components/ui/Field";
+import { Button } from "@/components/ui/Button";
 import { StepIndicator } from "@/features/onboarding/StepIndicator";
 import { STROKES, RACE_DISTANCES, type SwimStroke, type RaceDistance } from "@/constants/strokes";
 import { useOnboardingStore } from "@/features/onboarding/useOnboardingStore";
 import type { BaselineResult } from "@/types/onboarding";
+import { color, space } from "@/constants/theme";
 
 const STROKE_LIST = Object.entries(STROKES) as [SwimStroke, { label: string; short: string }][];
 
@@ -32,11 +40,11 @@ export default function BaselineScreen() {
   }
 
   return (
-    <ScrollView style={s.scroll} keyboardShouldPersistTaps="handled">
-      <View style={s.container}>
+    <Screen insetTop insetBottom>
+      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <StepIndicator current={0} total={4} />
-        <Text style={s.title}>Lähtötaso</Text>
-        <Text style={s.subtitle}>
+        <Text variant="title">Lähtötaso</Text>
+        <Text variant="body" color={color.inkMuted} style={s.subtitle}>
           Lisää aiemmat kisatuloksesi. Näitä käytetään kehityksesi mittaamiseen.
         </Text>
 
@@ -44,106 +52,81 @@ export default function BaselineScreen() {
           <View style={s.list}>
             {data.baselines.map(b => (
               <View key={b.id} style={s.listRow}>
-                <Text style={s.listName}>{b.distance}m {STROKES[b.stroke].label}</Text>
-                <Text style={s.listTime}>{b.timeString}</Text>
-                <TouchableOpacity onPress={() => remove(b.id)}>
-                  <Text style={s.removeBtn}>×</Text>
+                <Text variant="bodyStrong" style={s.listName}>{b.distance}m {STROKES[b.stroke].label}</Text>
+                <Text variant="mono" color={color.primaryInk} style={s.listTime}>{b.timeString}</Text>
+                <TouchableOpacity onPress={() => remove(b.id)} hitSlop={8}>
+                  <X size={18} color={color.accent} />
                 </TouchableOpacity>
               </View>
             ))}
           </View>
         )}
 
-        <View style={s.form}>
-          <Text style={s.formTitle}>Lisää tulos</Text>
+        <Card style={s.form}>
+          <Text variant="heading">Lisää tulos</Text>
 
-          <Text style={s.label}>Uintilaji</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+          <Text variant="label">Uintilaji</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={s.chipRow}>
               {STROKE_LIST.map(([s2, info]) => (
-                <TouchableOpacity
-                  key={s2}
-                  onPress={() => setStroke(s2)}
-                  style={[s.chip, stroke === s2 && s.chipActive]}
-                >
-                  <Text style={[s.chipText, stroke === s2 && s.chipTextActive]}>{info.label}</Text>
-                </TouchableOpacity>
+                <Chip key={s2} label={info.label} active={stroke === s2} onPress={() => setStroke(s2)} />
               ))}
             </View>
           </ScrollView>
 
-          <Text style={s.label}>Matka</Text>
+          <Text variant="label">Matka</Text>
           <View style={s.distRow}>
             {RACE_DISTANCES.map(d => (
-              <TouchableOpacity
-                key={d}
-                onPress={() => setDistance(d)}
-                style={[s.chip, distance === d && s.chipActive]}
-              >
-                <Text style={[s.chipText, distance === d && s.chipTextActive]}>{d}m</Text>
-              </TouchableOpacity>
+              <Chip key={d} label={`${d}m`} active={distance === d} onPress={() => setDistance(d)} />
             ))}
           </View>
 
-          <Text style={s.label}>Aika (esim. 1:02.45 tai 58.30)</Text>
+          <Text variant="label">Aika (esim. 1:02.45 tai 58.30)</Text>
           <View style={s.timeRow}>
-            <TextInput
-              style={s.timeInput}
+            <Field
+              containerStyle={s.timeInput}
               placeholder="mm:ss.hh"
               value={time}
               onChangeText={v => { setTime(v); setAddError(""); }}
               keyboardType="numeric"
             />
-            <TouchableOpacity style={s.addBtn} onPress={addResult}>
-              <Text style={s.addBtnText}>+</Text>
-            </TouchableOpacity>
+            <Button label="+" onPress={addResult} style={s.addBtn} />
           </View>
-          {addError ? <Text style={s.error}>{addError}</Text> : null}
-        </View>
+          {addError ? <Text variant="caption" color={color.accent}>{addError}</Text> : null}
+        </Card>
 
         <View style={s.navRow}>
-          <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Text style={s.backText}>← Takaisin</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.nextBtn} onPress={() => router.push("/onboarding/volume")}>
-            <Text style={s.nextText}>
-              {data.baselines.length === 0 ? "Ohita →" : "Seuraava →"}
-            </Text>
-          </TouchableOpacity>
+          <Button label="← Takaisin" variant="secondary" onPress={() => router.back()} style={s.navBtn} />
+          <Button
+            label={data.baselines.length === 0 ? "Ohita →" : "Seuraava →"}
+            onPress={() => router.push("/onboarding/volume")}
+            style={s.navBtn}
+          />
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: "#fff" },
-  container: { paddingHorizontal: 24, paddingTop: 56, paddingBottom: 24 },
-  title: { fontSize: 24, fontWeight: "700", color: "#111827", marginBottom: 4 },
-  subtitle: { color: "#6B7280", marginBottom: 24 },
-  list: { marginBottom: 24 },
-  listRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
-  listName: { flex: 1, fontWeight: "500", color: "#1F2937" },
-  listTime: { color: "#0EA5E9", fontWeight: "700", marginRight: 16 },
-  removeBtn: { color: "#F87171", fontSize: 20 },
-  form: { backgroundColor: "#F9FAFB", borderRadius: 16, padding: 16, marginBottom: 24 },
-  formTitle: { fontWeight: "600", color: "#374151", marginBottom: 12 },
-  label: { fontSize: 12, color: "#6B7280", marginBottom: 8 },
-  chipScroll: { marginBottom: 12 },
-  chipRow: { flexDirection: "row", gap: 8 },
-  distRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
-  chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", backgroundColor: "#fff" },
-  chipActive: { backgroundColor: "#0EA5E9", borderColor: "#0EA5E9" },
-  chipText: { fontWeight: "500", fontSize: 14, color: "#374151" },
-  chipTextActive: { color: "#fff" },
-  timeRow: { flexDirection: "row", gap: 12 },
-  timeInput: { flex: 1, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: "#fff", fontSize: 16 },
-  addBtn: { backgroundColor: "#0EA5E9", borderRadius: 12, paddingHorizontal: 20, alignItems: "center", justifyContent: "center" },
-  addBtnText: { color: "#fff", fontWeight: "600", fontSize: 18 },
-  error: { color: "#EF4444", fontSize: 12, marginTop: 8 },
-  navRow: { flexDirection: "row", gap: 12 },
-  backBtn: { flex: 1, paddingVertical: 16, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 16 },
-  backText: { color: "#4B5563", fontWeight: "500" },
-  nextBtn: { flex: 1, backgroundColor: "#0EA5E9", paddingVertical: 16, alignItems: "center", borderRadius: 16 },
-  nextText: { color: "#fff", fontWeight: "600" },
+  content: { paddingHorizontal: space.xxl, paddingTop: space.md, paddingBottom: space.xxl },
+  subtitle: { marginBottom: space.xxl },
+  list: { marginBottom: space.xxl },
+  listRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: space.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.border,
+  },
+  listName: { flex: 1 },
+  listTime: { marginRight: space.lg },
+  form: { gap: space.md, marginBottom: space.xxl },
+  chipRow: { flexDirection: "row", gap: space.sm },
+  distRow: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  timeRow: { flexDirection: "row", gap: space.md, alignItems: "stretch" },
+  timeInput: { flex: 1 },
+  addBtn: { justifyContent: "center" },
+  navRow: { flexDirection: "row", gap: space.md },
+  navBtn: { flex: 1 },
 });

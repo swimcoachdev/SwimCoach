@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Screen } from "@/components/ui/Screen";
+import { ScreenState } from "@/components/ui/ScreenState";
 import { WorkoutDetailView } from "@/features/workout/WorkoutDetail";
 import { useWorkoutDetail } from "@/lib/queries/workouts";
 
@@ -8,14 +9,11 @@ export default function WorkoutDetailScreen() {
   const router = useRouter();
   const workoutQ = useWorkoutDetail(id);
 
-  if (workoutQ.isLoading || !workoutQ.data) {
-    return <View style={s.loading}><Text style={s.loadingText}>Ladataan...</Text></View>;
-  }
-
-  return <WorkoutDetailView workout={workoutQ.data} onBack={() => router.back()} />;
+  return (
+    <Screen>
+      <ScreenState query={workoutQ}>
+        {(workout) => <WorkoutDetailView workout={workout} onBack={() => router.back()} />}
+      </ScreenState>
+    </Screen>
+  );
 }
-
-const s = StyleSheet.create({
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-  loadingText: { color: "#94A3B8" },
-});

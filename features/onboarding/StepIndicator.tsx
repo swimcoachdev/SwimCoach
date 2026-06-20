@@ -1,4 +1,6 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { Text } from "@/components/ui/Text";
+import { color, space, radius } from "@/constants/theme";
 
 interface Props {
   current: number;
@@ -21,16 +23,16 @@ export function StepIndicator({ current, total }: Props) {
           ]}
         />
       ))}
-      <Text style={s.label}>{current + 1}/{total}</Text>
+      <Text variant="caption" color={color.inkFaint} style={s.label}>{current + 1}/{total}</Text>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 32 },
-  dot: { height: 6, flex: 1, borderRadius: 3 },
-  dotDone: { backgroundColor: "#0EA5E9" },
-  dotCurrent: { backgroundColor: "#0EA5E9", opacity: 0.4 },
-  dotEmpty: { backgroundColor: "#E5E7EB" },
-  label: { fontSize: 12, color: "#9CA3AF", marginLeft: 4 },
+  row: { flexDirection: "row", alignItems: "center", gap: space.sm, marginBottom: space.xxxl },
+  dot: { height: 6, flex: 1, borderRadius: radius.sm / 2 },
+  dotDone: { backgroundColor: color.primary },
+  dotCurrent: { backgroundColor: color.primary, opacity: 0.4 },
+  dotEmpty: { backgroundColor: color.border },
+  label: { marginLeft: space.xs },
 });

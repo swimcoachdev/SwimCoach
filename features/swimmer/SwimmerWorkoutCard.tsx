@@ -1,12 +1,10 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { Text } from "@/components/ui/Text";
+import { color, space, radius, shadow } from "@/constants/theme";
 import { ZoneBadge } from "@/features/workout/ZoneBadge";
 import { calcZoneDistribution } from "@/lib/utils/zones";
-import type { IntensityZone } from "@/constants/zones";
+import { ZONES, type IntensityZone } from "@/constants/zones";
 import type { RecentWorkout } from "@/features/swimmer/swimmer-dashboard.lib";
-
-const ZONE_COLORS: Record<IntensityZone, string> = {
-  pk: "#3B82F6", vk: "#22C55E", mk: "#EAB308", mak: "#EF4444",
-};
 
 export function SwimmerWorkoutCard({ workout }: { workout: RecentWorkout }) {
   const sets = workout.workouts?.pool_sets ?? [];
@@ -15,8 +13,8 @@ export function SwimmerWorkoutCard({ workout }: { workout: RecentWorkout }) {
   return (
     <View style={s.card}>
       <View style={s.cardRow}>
-        <Text style={s.dateText}>{workout.workouts?.workout_date}</Text>
-        <Text style={s.distText}>{workout.actual_pool_m != null ? `${workout.actual_pool_m}m` : "—"}</Text>
+        <Text variant="bodyStrong" color={color.inkMuted}>{workout.workouts?.workout_date}</Text>
+        <Text variant="bodyStrong" color={color.primary}>{workout.actual_pool_m != null ? `${workout.actual_pool_m}m` : "—"}</Text>
       </View>
 
       {dist.total > 0 && (
@@ -24,7 +22,7 @@ export function SwimmerWorkoutCard({ workout }: { workout: RecentWorkout }) {
           <View style={s.zoneBar}>
             {(["pk", "vk", "mk", "mak"] as IntensityZone[]).map((z) => {
               const pct = dist[z] / dist.total;
-              return pct > 0 ? <View key={z} style={{ flex: pct, backgroundColor: ZONE_COLORS[z] }} /> : null;
+              return pct > 0 ? <View key={z} style={{ flex: pct, backgroundColor: ZONES[z].color }} /> : null;
             })}
           </View>
           <View style={s.zoneLegend}>
@@ -33,7 +31,7 @@ export function SwimmerWorkoutCard({ workout }: { workout: RecentWorkout }) {
               return (
                 <View key={z} style={s.zoneItem}>
                   <ZoneBadge zone={z} size="sm" />
-                  <Text style={s.zoneKm}>{Math.round(dist[z] / 10) / 100}km</Text>
+                  <Text variant="caption" color={color.inkMuted}>{Math.round(dist[z] / 10) / 100}km</Text>
                 </View>
               );
             })}
@@ -45,13 +43,10 @@ export function SwimmerWorkoutCard({ workout }: { workout: RecentWorkout }) {
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: "#ffffff", borderRadius: 16, padding: 16, marginBottom: 12,
-    shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  cardRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
-  dateText: { fontSize: 15, fontWeight: "600", color: "#374151" },
-  distText: { fontSize: 15, fontWeight: "700", color: "#0EA5E9" },
-  zoneBar: { flexDirection: "row", height: 8, borderRadius: 4, overflow: "hidden", marginBottom: 10 },
-  zoneLegend: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
-  zoneItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  zoneKm: { fontSize: 12, color: "#6b7280" },
+  card: { backgroundColor: color.surface, borderRadius: radius.lg, padding: space.lg, marginBottom: space.md,
+    ...shadow.card },
+  cardRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: space.sm + 2 },
+  zoneBar: { flexDirection: "row", height: 8, borderRadius: radius.sm / 2, overflow: "hidden", marginBottom: space.sm + 2 },
+  zoneLegend: { flexDirection: "row", gap: space.sm + 2, flexWrap: "wrap" },
+  zoneItem: { flexDirection: "row", alignItems: "center", gap: space.xs },
 });

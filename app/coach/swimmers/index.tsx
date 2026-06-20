@@ -1,13 +1,27 @@
 import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet } from "react-native";
+import { View, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { Users } from "lucide-react-native";
+import { Screen } from "@/components/ui/Screen";
+import { Header } from "@/components/ui/Header";
+import { Field } from "@/components/ui/Field";
+import { Chip } from "@/components/ui/Chip";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ScreenState } from "@/components/ui/ScreenState";
 import { useCoachContext } from "@/hooks/useCoachContext";
 import { useSeasonSummary } from "@/lib/queries/swimmers";
 import { SwimmerListRow } from "@/features/swimmer/SwimmerListRow";
 import { filterRoster } from "@/features/swimmer/roster.lib";
 import { rankSwimmers, type LensKey } from "@/features/swimmer/swimmer-card.lib";
+import { space } from "@/constants/theme";
 
 type SortKey = "name" | "goal" | "workouts";
+
+const SORT_LABELS: Record<SortKey, string> = {
+  name: "A–Z",
+  goal: "Tavoite %",
+  workouts: "Harjoitukset",
+};
 
 export default function SwimmersListScreen() {
   const router = useRouter();
@@ -18,52 +32,48 @@ export default function SwimmersListScreen() {
   const [sort, setSort] = useState<SortKey>("name");
 
   const summaryQ = useSeasonSummary(clubId ?? undefined, year);
-  const filtered = rankSwimmers(sort as LensKey, filterRoster(summaryQ.data ?? [], search));
 
   return (
-    <View style={s.screen}>
-      <View style={s.header}>
-        <Text style={s.title}>Uimarit</Text>
-        <TextInput
-          style={s.search}
-          placeholder="Hae nimellä..."
-          placeholderTextColor="#94A3B8"
-          value={search}
-          onChangeText={setSearch}
-        />
-        <View style={s.sortRow}>
-          {(["name", "goal", "workouts"] as SortKey[]).map((k) => (
-            <TouchableOpacity key={k} style={[s.sortBtn, sort === k && s.sortBtnActive]} onPress={() => setSort(k)}>
-              <Text style={[s.sortText, sort === k && s.sortTextActive]}>
-                {k === "name" ? "A–Z" : k === "goal" ? "Tavoite %" : "Harjoitukset"}
-              </Text>
-            </TouchableOpacity>
-          ))}
+    <Screen>
+      <Header title="Uimarit">
+        <View style={s.headerBody}>
+          <Field placeholder="Hae nimellä..." value={search} onChangeText={setSearch} />
+          <View style={s.sortRow}>
+            {(["name", "goal", "workouts"] as SortKey[]).map((k) => (
+              <Chip key={k} label={SORT_LABELS[k]} active={sort === k} onPress={() => setSort(k)} />
+            ))}
+          </View>
         </View>
-      </View>
+      </Header>
 
-      <ScrollView style={s.list} contentContainerStyle={s.listContent}>
-        {filtered.map((sw) => (
-          <SwimmerListRow key={sw.swimmer_id} swimmer={sw} onPress={() => router.push(`/coach/swimmers/${sw.swimmer_id}`)} />
-        ))}
-        <View style={{ height: 32 }} />
-      </ScrollView>
-    </View>
+      <ScreenState query={summaryQ}>
+        {(swimmers) => {
+          const filtered = rankSwimmers(sort as LensKey, filterRoster(swimmers, search));
+          if (filtered.length === 0) {
+            return <EmptyState icon={Users} text="Ei uimareita." />;
+          }
+          return (
+            <ScrollView style={s.list} contentContainerStyle={s.listContent}>
+              {filtered.map((sw) => (
+                <SwimmerListRow
+                  key={sw.swimmer_id}
+                  swimmer={sw}
+                  onPress={() => router.push(`/coach/swimmers/${sw.swimmer_id}`)}
+                />
+              ))}
+              <View style={s.bottomSpacer} />
+            </ScrollView>
+          );
+        }}
+      </ScreenState>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: { backgroundColor: "#fff", paddingTop: 56, paddingBottom: 12, paddingHorizontal: 16,
-    shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  title: { fontSize: 22, fontWeight: "700", color: "#0F172A", marginBottom: 10 },
-  search: { backgroundColor: "#F1F5F9", borderRadius: 12, paddingHorizontal: 16,
-    paddingVertical: 10, fontSize: 14, color: "#0F172A", marginBottom: 10 },
-  sortRow: { flexDirection: "row", gap: 8 },
-  sortBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: "#F1F5F9" },
-  sortBtnActive: { backgroundColor: "#0F172A" },
-  sortText: { fontSize: 12, color: "#64748B", fontWeight: "500" },
-  sortTextActive: { color: "#fff" },
+  headerBody: { gap: space.md, paddingHorizontal: space.lg, paddingBottom: space.xs },
+  sortRow: { flexDirection: "row", gap: space.sm },
   list: { flex: 1 },
-  listContent: { padding: 16 },
+  listContent: { padding: space.lg },
+  bottomSpacer: { height: space.xxxl },
 });

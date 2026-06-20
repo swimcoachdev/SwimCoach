@@ -1,9 +1,13 @@
 import { useState } from "react";
-import {
-  View, Text, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, StyleSheet,
-} from "react-native";
+import { View, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { Screen } from "@/components/ui/Screen";
+import { Header } from "@/components/ui/Header";
+import { Text } from "@/components/ui/Text";
+import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
+import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
 import { SetBuilder } from "@/features/workout/SetBuilder";
 import { DrylandForm } from "@/features/workout/DrylandForm";
 import { AttendanceList } from "@/features/workout/AttendanceList";
@@ -11,6 +15,7 @@ import { useNewWorkoutStore } from "@/features/workout/useNewWorkoutStore";
 import { useCoachContext } from "@/hooks/useCoachContext";
 import { useClubGroups, getGroupMembers } from "@/lib/queries/groups";
 import { useSaveWorkout } from "@/lib/queries/workouts";
+import { color, space, radius } from "@/constants/theme";
 
 type Step = "sets" | "dryland" | "attendance" | "confirm";
 const STEPS: { key: Step; label: string }[] = [
@@ -90,17 +95,12 @@ export default function NewWorkoutScreen() {
   }
 
   return (
-    <View style={s.root}>
-      {/* Header */}
-      <View style={s.header}>
-        <View style={s.headerRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={s.cancelBtn}>← Peruuta</Text>
-          </TouchableOpacity>
-          <Text style={s.headerTitle}>Uusi harjoitus</Text>
-          <Text style={s.headerMeta}>{totalPoolM > 0 ? `${totalPoolM}m` : ""}</Text>
-        </View>
-        {/* Step indicator */}
+    <Screen background={color.surface}>
+      <Header
+        onBack={() => router.back()}
+        title="Uusi harjoitus"
+        right={totalPoolM > 0 ? <Text variant="caption" color={color.inkFaint}>{totalPoolM}m</Text> : undefined}
+      >
         <View style={s.stepRow}>
           {STEPS.map((st, i) => (
             <TouchableOpacity
@@ -112,39 +112,35 @@ export default function NewWorkoutScreen() {
                 s.stepBar,
                 st.key === step ? s.stepBarActive : i < stepIdx ? s.stepBarDone : s.stepBarInactive,
               ]} />
-              <Text style={[s.stepLabel, st.key === step && s.stepLabelActive]}>
+              <Text variant="caption" color={st.key === step ? color.primary : color.inkFaint}>
                 {st.label}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
-      </View>
+      </Header>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled">
 
         {/* VAIHE 1: Setit */}
         {step === "sets" && (
           <>
-            <TextInput
-              style={s.dateInput}
+            <Field
+              style={s.fieldGap}
               value={store.date}
               onChangeText={store.setDate}
               placeholder="vvvv-kk-pp"
-              placeholderTextColor="#94a3b8"
             />
             {groups.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.fieldGap}>
                 <View style={s.chipRow}>
                   {groups.map(g => (
-                    <TouchableOpacity
+                    <Chip
                       key={g.id}
-                      style={[s.chip, store.group_id === g.id && s.chipActive]}
+                      label={g.name}
+                      active={store.group_id === g.id}
                       onPress={() => selectGroup(g.id)}
-                    >
-                      <Text style={[s.chipText, store.group_id === g.id && s.chipTextActive]}>
-                        {g.name}
-                      </Text>
-                    </TouchableOpacity>
+                    />
                   ))}
                 </View>
               </ScrollView>
@@ -156,7 +152,7 @@ export default function NewWorkoutScreen() {
         {/* VAIHE 2: Kuivaharjoittelu */}
         {step === "dryland" && (
           <>
-            <Text style={s.stepHint}>Oliko harjoituksessa kuivaosuus?</Text>
+            <Text variant="body" color={color.inkMuted} style={s.stepHint}>Oliko harjoituksessa kuivaosuus?</Text>
             <DrylandForm value={store.dryland} onChange={store.setDryland} />
           </>
         )}
@@ -164,7 +160,7 @@ export default function NewWorkoutScreen() {
         {/* VAIHE 3: Läsnäolo */}
         {step === "attendance" && (
           <>
-            <Text style={s.stepHint}>
+            <Text variant="body" color={color.inkMuted} style={s.stepHint}>
               Merkitse ketkä olivat paikalla. Napauta nimeä muuttaaksesi metrimäärää.
             </Text>
             <AttendanceList
@@ -179,151 +175,93 @@ export default function NewWorkoutScreen() {
         {/* VAIHE 4: Yhteenveto */}
         {step === "confirm" && (
           <View>
-            <Text style={s.confirmTitle}>Yhteenveto</Text>
+            <Text variant="heading" style={s.confirmTitle}>Yhteenveto</Text>
 
-            <View style={s.summaryCard}>
-              <Text style={s.summaryLabel}>Päivä</Text>
-              <Text style={s.summaryValue}>{store.date}</Text>
-            </View>
+            <Card style={s.summaryCard}>
+              <Text variant="label">Päivä</Text>
+              <Text variant="bodyStrong">{store.date}</Text>
+            </Card>
 
-            <View style={s.summaryCard}>
-              <Text style={s.summaryLabel}>Setit ({store.sets.length} kpl)</Text>
-              {store.sets.map((st, i) => (
-                <Text key={st.id} style={s.setRow}>
+            <Card style={s.summaryCard}>
+              <Text variant="label">Setit ({store.sets.length} kpl)</Text>
+              {store.sets.map((st) => (
+                <Text key={st.id} variant="caption" color={color.inkMuted} style={s.setRow}>
                   {st.repetitions}×{st.distance_m}m {st.stroke} — {st.intensity_zone.toUpperCase()}
                 </Text>
               ))}
-              <Text style={s.totalM}>{totalPoolM}m yhteensä</Text>
-            </View>
+              <Text variant="bodyStrong" color={color.primary} style={s.totalM}>{totalPoolM}m yhteensä</Text>
+            </Card>
 
             {store.dryland && (
-              <View style={s.summaryCard}>
-                <Text style={s.summaryLabel}>Kuivaharjoittelu</Text>
-                <Text style={s.summaryValue}>{store.dryland.duration_min} min · {store.dryland.category}</Text>
-              </View>
+              <Card style={s.summaryCard}>
+                <Text variant="label">Kuivaharjoittelu</Text>
+                <Text variant="bodyStrong">{store.dryland.duration_min} min · {store.dryland.category}</Text>
+              </Card>
             )}
 
-            <View style={s.summaryCard}>
-              <Text style={s.summaryLabel}>Läsnä</Text>
-              <Text style={s.summaryValue}>
+            <Card style={s.summaryCard}>
+              <Text variant="label">Läsnä</Text>
+              <Text variant="bodyStrong">
                 {store.attendees.filter(a => a.present).map(a => a.full_name).join(", ") || "—"}
               </Text>
-            </View>
+            </Card>
 
-            <TextInput
-              style={[s.dateInput, { height: 80, textAlignVertical: "top" }]}
+            <Field
+              style={s.notesInput}
               placeholder="Muistiinpanot (valinnainen)"
-              placeholderTextColor="#94a3b8"
               value={store.notes}
               onChangeText={store.setNotes}
               multiline
             />
 
             {saveError ? (
-              <View style={s.errorBox}><Text style={s.errorText}>{saveError}</Text></View>
+              <View style={s.errorBox}><Text variant="caption" color={color.risk}>{saveError}</Text></View>
             ) : null}
-            <TouchableOpacity style={s.saveBtn} onPress={save} disabled={saveWorkout.isPending}>
-              {saveWorkout.isPending
-                ? <ActivityIndicator color="white" />
-                : <Text style={s.saveBtnText}>💾 Tallenna harjoitus</Text>
-              }
-            </TouchableOpacity>
+            <Button
+              label="Tallenna harjoitus"
+              onPress={save}
+              loading={saveWorkout.isPending}
+              style={s.saveBtn}
+            />
           </View>
         )}
 
         {/* Seuraava-nappi */}
         {step !== "confirm" && (
-          <TouchableOpacity
-            style={s.nextBtn}
+          <Button
+            label={stepIdx < STEPS.length - 2 ? "Seuraava →" : "Tarkista →"}
             onPress={() => {
               const next = STEPS[stepIdx + 1];
               if (next) setStep(next.key);
             }}
-          >
-            <Text style={s.nextBtnText}>
-              {stepIdx < STEPS.length - 2 ? "Seuraava →" : "Tarkista →"}
-            </Text>
-          </TouchableOpacity>
+            style={s.nextBtn}
+          />
         )}
-        <View style={{ height: 32 }} />
+        <View style={s.bottomSpacer} />
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#ffffff" },
-  header: {
-    paddingTop: 56,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
-  cancelBtn: { fontSize: 15, color: "#0EA5E9" },
-  headerTitle: { fontSize: 16, fontWeight: "700", color: "#111827" },
-  headerMeta: { fontSize: 14, color: "#94a3b8", fontWeight: "600" },
-  stepRow: { flexDirection: "row", gap: 8 },
-  stepItem: { flex: 1, alignItems: "center" },
-  stepBar: { height: 4, width: "100%", borderRadius: 2, marginBottom: 4 },
-  stepBarActive: { backgroundColor: "#0EA5E9" },
-  stepBarDone: { backgroundColor: "#0EA5E9", opacity: 0.35 },
-  stepBarInactive: { backgroundColor: "#e2e8f0" },
-  stepLabel: { fontSize: 11, color: "#94a3b8" },
-  stepLabelActive: { color: "#0EA5E9", fontWeight: "700" },
+  stepRow: { flexDirection: "row", gap: space.sm, paddingHorizontal: space.lg, paddingBottom: space.md },
+  stepItem: { flex: 1, alignItems: "center", gap: space.xs },
+  stepBar: { height: 4, width: "100%", borderRadius: 2 },
+  stepBarActive: { backgroundColor: color.primary },
+  stepBarDone: { backgroundColor: color.primary, opacity: 0.35 },
+  stepBarInactive: { backgroundColor: color.border },
   scroll: { flex: 1 },
-  scrollContent: { padding: 16 },
-  dateInput: {
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: "#111827",
-    marginBottom: 14,
-  },
-  chipRow: { flexDirection: "row", gap: 8 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#ffffff",
-  },
-  chipActive: { backgroundColor: "#0EA5E9", borderColor: "#0EA5E9" },
-  chipText: { fontSize: 13, fontWeight: "500", color: "#374151" },
-  chipTextActive: { color: "#ffffff" },
-  stepHint: { fontSize: 14, color: "#6b7280", marginBottom: 16 },
-  confirmTitle: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 16 },
-  summaryCard: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
-  },
-  summaryLabel: { fontSize: 11, color: "#94a3b8", fontWeight: "600", marginBottom: 4 },
-  summaryValue: { fontSize: 15, fontWeight: "600", color: "#111827" },
-  setRow: { fontSize: 13, color: "#374151", marginBottom: 2 },
-  totalM: { fontSize: 15, fontWeight: "700", color: "#0EA5E9", marginTop: 8 },
-  nextBtn: {
-    backgroundColor: "#0EA5E9",
-    borderRadius: 16,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  nextBtnText: { color: "#ffffff", fontWeight: "600", fontSize: 15 },
-  saveBtn: {
-    backgroundColor: "#0EA5E9",
-    borderRadius: 16,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  saveBtnText: { color: "#ffffff", fontWeight: "700", fontSize: 16 },
-  errorBox: { backgroundColor: "#FEF2F2", borderRadius: 10, padding: 12, marginBottom: 12 },
-  errorText: { color: "#DC2626", fontSize: 13 },
+  scrollContent: { padding: space.lg },
+  fieldGap: { marginBottom: space.md },
+  chipRow: { flexDirection: "row", gap: space.sm },
+  stepHint: { marginBottom: space.lg },
+  confirmTitle: { marginBottom: space.lg },
+  summaryCard: { marginBottom: space.md, gap: space.xs },
+  setRow: { marginBottom: 2 },
+  totalM: { marginTop: space.sm },
+  notesInput: { height: 80, textAlignVertical: "top", marginBottom: space.md },
+  errorBox: { backgroundColor: color.riskWash, borderRadius: radius.sm, padding: space.md, marginBottom: space.md },
+  saveBtn: { marginBottom: space.lg },
+  nextBtn: { marginTop: space.lg },
+  bottomSpacer: { height: space.xxxl },
 });

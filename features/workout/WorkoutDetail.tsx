@@ -1,12 +1,13 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { ChevronLeft } from "lucide-react-native";
+import { Text } from "@/components/ui/Text";
 import { ZoneBadge } from "@/features/workout/ZoneBadge";
 import { ZoneDistributionChart } from "@/components/charts/ZoneDistribution";
 import { calcZoneDistribution } from "@/lib/utils/zones";
 import { STROKES } from "@/constants/strokes";
 import { DRYLAND_CATEGORIES } from "@/types/workout";
 import type { WorkoutDetail } from "@/features/workout/workout-detail.lib";
-
-const BRAND = "#0EA5E9";
+import { color, radius, space, shadow } from "@/constants/theme";
 
 export function WorkoutDetailView({ workout, onBack }: { workout: WorkoutDetail; onBack: () => void }) {
   const sets = workout.pool_sets ?? [];
@@ -17,11 +18,12 @@ export function WorkoutDetailView({ workout, onBack }: { workout: WorkoutDetail;
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content}>
       <View style={s.headerSection}>
-        <TouchableOpacity onPress={onBack} style={s.back}>
-          <Text style={s.backText}>← Takaisin</Text>
+        <TouchableOpacity onPress={onBack} style={s.back} hitSlop={8}>
+          <ChevronLeft size={18} color={color.primary} />
+          <Text variant="body" color={color.primary}>Takaisin</Text>
         </TouchableOpacity>
-        <Text style={s.date}>{workout.workout_date}</Text>
-        <Text style={s.meta}>
+        <Text variant="title">{workout.workout_date}</Text>
+        <Text variant="caption" style={s.meta}>
           {workout.total_pool_m > 0 ? `${workout.total_pool_m}m uintia` : ""}
           {workout.total_pool_m > 0 && dryland ? " + " : ""}
           {dryland ? `${dryland.duration_min} min ${DRYLAND_CATEGORIES[dryland.category] ?? dryland.category}` : ""}
@@ -30,36 +32,36 @@ export function WorkoutDetailView({ workout, onBack }: { workout: WorkoutDetail;
 
       {sets.length > 0 && (
         <View style={s.card}>
-          <Text style={s.cardTitle}>Ohjelma</Text>
+          <Text variant="heading" style={s.cardTitle}>Ohjelma</Text>
           {sets.map((set, i) => (
             <View key={set.id} style={s.setRow}>
-              <Text style={s.setNum}>{i + 1}</Text>
-              <Text style={s.setMain}>
+              <Text variant="caption" color={color.inkFaint} style={s.setNum}>{i + 1}</Text>
+              <Text variant="bodyStrong" style={s.setMain}>
                 {set.repetitions}×{set.distance_m}m{" "}
-                <Text style={s.setStroke}>{STROKES[set.stroke as keyof typeof STROKES]?.short ?? ""}</Text>
+                <Text variant="body" color={color.inkFaint}>{STROKES[set.stroke as keyof typeof STROKES]?.short ?? ""}</Text>
               </Text>
-              <Text style={s.setTotal}>{set.total_m}m</Text>
+              <Text variant="body" color={color.inkMuted} style={s.setTotal}>{set.total_m}m</Text>
               <ZoneBadge zone={set.intensity_zone} size="sm" />
             </View>
           ))}
-          <Text style={s.totalM}>{workout.total_pool_m}m</Text>
+          <Text variant="bodyStrong" color={color.primary} style={s.totalM}>{workout.total_pool_m}m</Text>
         </View>
       )}
 
       {sets.length > 0 && (
         <View style={s.card}>
-          <Text style={s.cardTitle}>Tehoaluejakauma</Text>
+          <Text variant="heading" style={s.cardTitle}>Tehoaluejakauma</Text>
           <ZoneDistributionChart actual={zoneDist} />
         </View>
       )}
 
       {attendees.length > 0 && (
         <View style={s.card}>
-          <Text style={s.cardTitle}>Läsnäolijat ({attendees.length})</Text>
+          <Text variant="heading" style={s.cardTitle}>Läsnäolijat ({attendees.length})</Text>
           {attendees.map((a) => (
             <View key={a.id} style={s.attendeeRow}>
-              <Text style={s.attendeeName}>{a.swimmers?.full_name}</Text>
-              <Text style={s.attendeeM}>{a.actual_pool_m ?? workout.total_pool_m}m</Text>
+              <Text variant="body" style={s.attendeeName}>{a.swimmers?.full_name}</Text>
+              <Text variant="body" color={color.inkMuted}>{a.actual_pool_m ?? workout.total_pool_m}m</Text>
             </View>
           ))}
         </View>
@@ -69,25 +71,37 @@ export function WorkoutDetailView({ workout, onBack }: { workout: WorkoutDetail;
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F8FAFC" },
-  content: { paddingBottom: 32 },
-  headerSection: { paddingHorizontal: 16, paddingTop: 56, paddingBottom: 16 },
-  back: { marginBottom: 12 },
-  backText: { color: BRAND, fontSize: 14 },
-  date: { fontSize: 20, fontWeight: "700", color: "#0F172A" },
-  meta: { fontSize: 13, color: "#64748B", marginTop: 2 },
-  card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginHorizontal: 16,
-    marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
-  cardTitle: { fontSize: 14, fontWeight: "600", color: "#0F172A", marginBottom: 12 },
-  setRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: "#F8FAFC" },
-  setNum: { width: 20, fontSize: 11, color: "#94A3B8" },
-  setMain: { flex: 1, fontSize: 13, fontWeight: "500", color: "#0F172A" },
-  setStroke: { color: "#94A3B8", fontWeight: "400" },
-  setTotal: { fontSize: 13, color: "#64748B", marginRight: 10 },
-  totalM: { fontSize: 14, fontWeight: "700", color: BRAND, textAlign: "right", marginTop: 10 },
-  attendeeRow: { flexDirection: "row", alignItems: "center", paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: "#F8FAFC" },
-  attendeeName: { flex: 1, fontSize: 13, color: "#0F172A" },
-  attendeeM: { fontSize: 13, color: "#64748B" },
+  screen: { flex: 1, backgroundColor: color.bg },
+  content: { paddingBottom: space.xxxl },
+  headerSection: { paddingHorizontal: space.lg, paddingTop: space.huge, paddingBottom: space.lg },
+  back: { flexDirection: "row", alignItems: "center", marginLeft: -space.xs, marginBottom: space.md },
+  meta: { marginTop: 2 },
+  card: {
+    backgroundColor: color.surface,
+    borderRadius: radius.lg,
+    padding: space.lg,
+    marginHorizontal: space.lg,
+    marginBottom: space.md,
+    ...shadow.card,
+  },
+  cardTitle: { marginBottom: space.md },
+  setRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: space.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: color.border,
+  },
+  setNum: { width: 20 },
+  setMain: { flex: 1 },
+  setTotal: { marginRight: space.sm },
+  totalM: { textAlign: "right", marginTop: space.sm },
+  attendeeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: space.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: color.border,
+  },
+  attendeeName: { flex: 1 },
 });

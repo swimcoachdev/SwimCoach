@@ -3,6 +3,7 @@ import { Platform, View, Dimensions, ActivityIndicator } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useFonts } from "expo-font";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { queryClient } from "@/lib/query-client";
 import { SairaCondensed_600SemiBold, SairaCondensed_700Bold } from "@expo-google-fonts/saira-condensed";
 import {
@@ -22,9 +23,11 @@ export default function RootLayout() {
   // The provider must sit ABOVE everything that uses TanStack Query — including
   // useAuth (its role lookup is a query). So the app's hooks live in a child.
   return (
-    <QueryClientProvider client={queryClient}>
-      <RootNavigator />
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <RootNavigator />
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
 

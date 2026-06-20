@@ -1,15 +1,23 @@
 import { useState } from "react";
-import {
-  View, Text, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Modal, StyleSheet
-} from "react-native";
+import { View, ScrollView, Modal, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Plus, X } from "lucide-react-native";
+import { Screen } from "@/components/ui/Screen";
+import { Header } from "@/components/ui/Header";
+import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
+import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
+import { Text } from "@/components/ui/Text";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ScreenState } from "@/components/ui/ScreenState";
 import { useCompetitionDetail, useSaveCompetitionResult } from "@/lib/queries/competitions";
 import { useSeasonSummary } from "@/lib/queries/swimmers";
 import { groupResultsBySwimmer } from "@/features/competition/competitions.lib";
 import { useCoachContext } from "@/hooks/useCoachContext";
 import { timeStringToMs, msToTimeString } from "@/lib/utils/time";
 import { STROKES, RACE_DISTANCES, type SwimStroke, type RaceDistance } from "@/constants/strokes";
+import { color, radius, space } from "@/constants/theme";
 
 const STROKE_LIST = Object.entries(STROKES) as [SwimStroke, { label: string; short: string }][];
 
@@ -32,7 +40,6 @@ export default function CompetitionDetailScreen() {
   const swimmersQ = useSeasonSummary(clubId ?? undefined, year);
   const saveResultMutation = useSaveCompetitionResult();
 
-  const competition = competitionQ.data;
   const swimmers = swimmersQ.data ?? [];
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -51,6 +58,7 @@ export default function CompetitionDetailScreen() {
     }
     const timeMs = timeStringToMs(entry.timeString);
     if (timeMs <= 0) { setSaveError("Tarkista aika-formaatti (esim. 1:02.45)"); return; }
+    const competition = competitionQ.data;
     if (!competition) return;
 
     setSaveError("");
@@ -70,252 +78,234 @@ export default function CompetitionDetailScreen() {
     }
   }
 
-  if (competitionQ.isLoading || !competition) return (
-    <View style={s.center}>
-      <ActivityIndicator size="large" color="#0EA5E9" />
-    </View>
-  );
-
-  const results = competition.competition_results ?? [];
-  const bySwimmer = groupResultsBySwimmer(results);
-
   return (
-    <View style={s.screen}>
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Text style={s.backText}>← Kilpailut</Text>
-        </TouchableOpacity>
-        <View style={s.headerRow}>
-          <View style={s.headerInfo}>
-            <Text style={s.headerTitle}>{competition?.name}</Text>
-            <Text style={s.headerMeta}>
-              {competition?.competition_date}
-              {competition?.location ? " · " + competition.location : ""}
-            </Text>
-          </View>
-          <TouchableOpacity style={s.addBtn} onPress={() => openModal()}>
-            <Text style={s.addBtnText}>+ Tulos</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+    <Screen>
+      <ScreenState query={competitionQ} errorText="Kilpailua ei löytynyt.">
+        {(competition) => {
+          const results = competition.competition_results ?? [];
+          const bySwimmer = groupResultsBySwimmer(results);
+          return (
+            <>
+              <Header
+                onBack={() => router.back()}
+                title={competition.name}
+                subtitle={
+                  competition.competition_date + (competition.location ? " · " + competition.location : "")
+                }
+                right={
+                  <Button
+                    label="Tulos"
+                    variant="secondary"
+                    icon={<Plus size={16} color={color.primary} strokeWidth={2.5} />}
+                    onPress={() => openModal()}
+                  />
+                }
+              />
 
-      <ScrollView style={s.scroll}>
-        {/* Pikavalinnat */}
-        {swimmers.length > 0 && (
-          <View style={s.quickSection}>
-            <Text style={s.sectionLabel}>LISÄÄ TULOS UIMARILLE</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={s.chipRow}>
-                {swimmers.map(sw => (
-                  <TouchableOpacity
-                    key={sw.swimmer_id}
-                    style={s.swimmerChip}
-                    onPress={() => openModal(sw.swimmer_id, sw.full_name)}
-                  >
-                    <Text style={s.swimmerChipText}>{sw.full_name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Tulokset */}
-        {bySwimmer.length === 0 ? (
-          <View style={s.empty}>
-            <Text style={s.emptyEmoji}>📋</Text>
-            <Text style={s.emptyText}>Ei tuloksia vielä. Lisää ensimmäinen tulos yllä.</Text>
-          </View>
-        ) : (
-          bySwimmer.map(({ swimmerId: sid, name, results: sResults }) => (
-            <View key={sid} style={s.card}>
-              <Text style={s.cardName}>{name}</Text>
-              {sResults.map((r) => {
-                const isPR = r.is_personal_best;
-                const label = r.distance + "m " + (STROKES[r.stroke as SwimStroke]?.short ?? r.stroke);
-                return (
-                  <View key={r.id} style={s.resultRow}>
-                    <Text style={s.resultLabel}>{label}</Text>
-                    {r.place_overall && (
-                      <Text style={s.placeText}>#{r.place_overall}</Text>
-                    )}
-                    <Text style={[s.timeText, isPR && s.timeTextPR]}>
-                      {msToTimeString(r.result_time_ms)}
-                    </Text>
-                    {isPR && <Text style={s.prBadge}>PR</Text>}
+              <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
+                {swimmers.length > 0 && (
+                  <View style={s.quickSection}>
+                    <Text variant="label">Lisää tulos uimarille</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={s.chipRow}>
+                        {swimmers.map((sw) => (
+                          <Chip
+                            key={sw.swimmer_id}
+                            label={sw.full_name}
+                            onPress={() => openModal(sw.swimmer_id, sw.full_name)}
+                          />
+                        ))}
+                      </View>
+                    </ScrollView>
                   </View>
-                );
-              })}
-              <TouchableOpacity style={s.addResultBtn} onPress={() => openModal(sid, name)}>
-                <Text style={s.addResultText}>+ Lisää suoritus</Text>
-              </TouchableOpacity>
-            </View>
-          ))
-        )}
-        <View style={{ height: 32 }} />
-      </ScrollView>
+                )}
 
-      {/* Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <ScrollView style={s.modal} keyboardShouldPersistTaps="handled">
-          <View style={s.modalContent}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Lisää tulos</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Text style={s.closeBtn}>✕</Text>
-              </TouchableOpacity>
-            </View>
+                {bySwimmer.length === 0 ? (
+                  <EmptyState icon={Plus} text="Ei tuloksia vielä. Lisää ensimmäinen tulos yllä." />
+                ) : (
+                  bySwimmer.map(({ swimmerId: sid, name, results: sResults }) => (
+                    <Card key={sid} style={s.card}>
+                      <Text variant="heading" style={s.cardName}>{name}</Text>
+                      {sResults.map((r) => {
+                        const isPR = r.is_personal_best;
+                        const label = r.distance + "m " + (STROKES[r.stroke as SwimStroke]?.short ?? r.stroke);
+                        return (
+                          <View key={r.id} style={s.resultRow}>
+                            <Text variant="body" color={color.inkMuted} style={s.resultLabel}>{label}</Text>
+                            {r.place_overall ? (
+                              <Text variant="caption" style={s.placeText}>#{r.place_overall}</Text>
+                            ) : null}
+                            <Text variant="mono" color={isPR ? color.good : color.primary}>
+                              {msToTimeString(r.result_time_ms)}
+                            </Text>
+                            {isPR ? <Text variant="label" color={color.good} style={s.prBadge}>PR</Text> : null}
+                          </View>
+                        );
+                      })}
+                      <Button
+                        label="Lisää suoritus"
+                        variant="ghost"
+                        onPress={() => openModal(sid, name)}
+                        style={s.addResultBtn}
+                      />
+                    </Card>
+                  ))
+                )}
+                <View style={s.bottomSpacer} />
+              </ScrollView>
 
-            {!entry.swimmerId ? (
-              <>
-                <Text style={s.fieldLabel}>Uimari</Text>
-                <ScrollView style={{ maxHeight: 180 }}>
-                  {swimmers.map(sw => (
-                    <TouchableOpacity
-                      key={sw.swimmer_id}
-                      style={s.swimmerRow}
-                      onPress={() => setEntry(e => ({ ...e, swimmerId: sw.swimmer_id, swimmerName: sw.full_name }))}
-                    >
-                      <Text style={s.swimmerRowText}>{sw.full_name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </>
-            ) : (
-              <View style={s.selectedSwimmer}>
-                <Text style={s.selectedName}>{entry.swimmerName}</Text>
-                <TouchableOpacity onPress={() => setEntry(e => ({ ...e, swimmerId: undefined, swimmerName: undefined }))}>
-                  <Text style={s.changeText}>vaihda</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              <Modal
+                visible={modalVisible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setModalVisible(false)}
+              >
+                <Screen background={color.surface}>
+                  <ScrollView style={s.modal} keyboardShouldPersistTaps="handled">
+                    <View style={s.modalContent}>
+                      <View style={s.modalHeader}>
+                        <Text variant="title">Lisää tulos</Text>
+                        <Button
+                          label=""
+                          variant="ghost"
+                          icon={<X size={20} color={color.inkMuted} />}
+                          onPress={() => setModalVisible(false)}
+                          style={s.closeBtn}
+                        />
+                      </View>
 
-            <Text style={s.fieldLabel}>Laji</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
-              <View style={s.chipRow}>
-                {STROKE_LIST.map(([str, info]) => (
-                  <TouchableOpacity
-                    key={str}
-                    onPress={() => setEntry(e => ({ ...e, stroke: str }))}
-                    style={[s.chip, entry.stroke === str && s.chipActive]}
-                  >
-                    <Text style={[s.chipText, entry.stroke === str && s.chipTextActive]}>{info.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
+                      {!entry.swimmerId ? (
+                        <View style={s.field}>
+                          <Text variant="label">Uimari</Text>
+                          <ScrollView style={s.swimmerList} contentContainerStyle={s.swimmerListContent}>
+                            {swimmers.map((sw) => (
+                              <Chip
+                                key={sw.swimmer_id}
+                                label={sw.full_name}
+                                onPress={() => setEntry((e) => ({ ...e, swimmerId: sw.swimmer_id, swimmerName: sw.full_name }))}
+                              />
+                            ))}
+                          </ScrollView>
+                        </View>
+                      ) : (
+                        <View style={s.selectedSwimmer}>
+                          <Text variant="bodyStrong" color={color.primaryInk}>{entry.swimmerName}</Text>
+                          <Button
+                            label="vaihda"
+                            variant="ghost"
+                            onPress={() => setEntry((e) => ({ ...e, swimmerId: undefined, swimmerName: undefined }))}
+                            style={s.changeBtn}
+                          />
+                        </View>
+                      )}
 
-            <Text style={s.fieldLabel}>Matka</Text>
-            <View style={s.distRow}>
-              {RACE_DISTANCES.map(d => (
-                <TouchableOpacity
-                  key={d}
-                  onPress={() => setEntry(e => ({ ...e, distance: d }))}
-                  style={[s.chip, entry.distance === d && s.chipActive]}
-                >
-                  <Text style={[s.chipText, entry.distance === d && s.chipTextActive]}>{d}m</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                      <View style={s.field}>
+                        <Text variant="label">Laji</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          <View style={s.chipRow}>
+                            {STROKE_LIST.map(([str, info]) => (
+                              <Chip
+                                key={str}
+                                label={info.label}
+                                active={entry.stroke === str}
+                                onPress={() => setEntry((e) => ({ ...e, stroke: str }))}
+                              />
+                            ))}
+                          </View>
+                        </ScrollView>
+                      </View>
 
-            <Text style={s.fieldLabel}>Aika *</Text>
-            <TextInput
-              style={s.textInput}
-              placeholder="esim. 2:05.34 tai 58.22"
-              value={entry.timeString}
-              onChangeText={v => setEntry(e => ({ ...e, timeString: v }))}
-              keyboardType="numeric"
-              autoFocus
-            />
+                      <View style={s.field}>
+                        <Text variant="label">Matka</Text>
+                        <View style={s.distRow}>
+                          {RACE_DISTANCES.map((d) => (
+                            <Chip
+                              key={d}
+                              label={`${d}m`}
+                              active={entry.distance === d}
+                              onPress={() => setEntry((e) => ({ ...e, distance: d }))}
+                            />
+                          ))}
+                        </View>
+                      </View>
 
-            <Text style={s.fieldLabel}>Sijoitus (valinnainen)</Text>
-            <TextInput
-              style={[s.textInput, { marginBottom: 8 }]}
-              placeholder="esim. 3"
-              value={entry.placeOverall}
-              onChangeText={v => setEntry(e => ({ ...e, placeOverall: v }))}
-              keyboardType="number-pad"
-            />
+                      <Field
+                        label="Aika *"
+                        placeholder="esim. 2:05.34 tai 58.22"
+                        value={entry.timeString}
+                        onChangeText={(v) => setEntry((e) => ({ ...e, timeString: v }))}
+                        keyboardType="numeric"
+                        autoFocus
+                        style={s.modalInput}
+                      />
 
-            {saveError ? <Text style={s.errorText}>{saveError}</Text> : null}
+                      <Field
+                        label="Sijoitus (valinnainen)"
+                        placeholder="esim. 3"
+                        value={entry.placeOverall}
+                        onChangeText={(v) => setEntry((e) => ({ ...e, placeOverall: v }))}
+                        keyboardType="number-pad"
+                        style={s.modalInput}
+                      />
 
-            <TouchableOpacity
-              style={[s.saveBtn, (!entry.swimmerId || !entry.timeString) && s.saveBtnDisabled]}
-              onPress={saveResult}
-              disabled={saveResultMutation.isPending || !entry.swimmerId || !entry.timeString}
-            >
-              {saveResultMutation.isPending
-                ? <ActivityIndicator color="#fff" />
-                : <Text style={[s.saveBtnText, (!entry.swimmerId || !entry.timeString) && s.saveBtnTextDisabled]}>
-                    Tallenna tulos
-                  </Text>
-              }
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </Modal>
-    </View>
+                      {saveError ? (
+                        <Text variant="caption" color={color.accent}>{saveError}</Text>
+                      ) : null}
+
+                      <Button
+                        label="Tallenna tulos"
+                        onPress={saveResult}
+                        loading={saveResultMutation.isPending}
+                        disabled={!entry.swimmerId || !entry.timeString}
+                      />
+                    </View>
+                  </ScrollView>
+                </Screen>
+              </Modal>
+            </>
+          );
+        }}
+      </ScreenState>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F9FAFB" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: { backgroundColor: "#fff", paddingTop: 56, paddingBottom: 16, paddingHorizontal: 16, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  backBtn: { marginBottom: 8 },
-  backText: { color: "#0EA5E9", fontSize: 14 },
-  headerRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
-  headerInfo: { flex: 1, marginRight: 12 },
-  headerTitle: { fontSize: 20, fontWeight: "700", color: "#111827" },
-  headerMeta: { color: "#9CA3AF", fontSize: 14, marginTop: 2 },
-  addBtn: { backgroundColor: "#0EA5E9", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
-  addBtnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
-  scroll: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
-  quickSection: { marginBottom: 16 },
-  sectionLabel: { fontSize: 12, color: "#9CA3AF", marginBottom: 8, fontWeight: "500" },
-  chipRow: { flexDirection: "row", gap: 8 },
-  swimmerChip: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
-  swimmerChipText: { fontSize: 14, fontWeight: "500", color: "#374151" },
-  empty: { backgroundColor: "#fff", borderRadius: 16, padding: 32, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  emptyEmoji: { fontSize: 32, marginBottom: 8 },
-  emptyText: { color: "#9CA3AF", fontSize: 14, textAlign: "center" },
-  card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  cardName: { fontWeight: "600", fontSize: 16, marginBottom: 12 },
-  resultRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F9FAFB" },
-  resultLabel: { flex: 1, fontSize: 14, color: "#374151" },
-  placeText: { fontSize: 12, color: "#9CA3AF", marginRight: 12 },
-  timeText: { fontWeight: "700", fontSize: 14, color: "#0EA5E9" },
-  timeTextPR: { color: "#22C55E" },
-  prBadge: { fontSize: 12, color: "#86EFAC", marginLeft: 4 },
-  addResultBtn: { marginTop: 8, paddingVertical: 6, alignItems: "center" },
-  addResultText: { color: "#0EA5E9", fontSize: 14 },
-  modal: { flex: 1, backgroundColor: "#fff" },
-  modalContent: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 32 },
-  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24 },
-  modalTitle: { fontSize: 20, fontWeight: "700", color: "#111827" },
-  closeBtn: { color: "#9CA3AF", fontSize: 18 },
-  fieldLabel: { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 8, marginTop: 4 },
-  swimmerRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
-  swimmerRowText: { fontSize: 16, color: "#374151" },
-  selectedSwimmer: { backgroundColor: "#EFF6FF", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  selectedName: { fontWeight: "600", color: "#1D4ED8" },
-  changeText: { color: "#93C5FD", fontSize: 14 },
-  chipScroll: { marginBottom: 16 },
-  distRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", backgroundColor: "#fff" },
-  chipActive: { backgroundColor: "#0EA5E9", borderColor: "#0EA5E9" },
-  chipText: { fontWeight: "500", fontSize: 14, color: "#374151" },
-  chipTextActive: { color: "#fff" },
-  textInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, backgroundColor: "#fff", marginBottom: 16 },
-  errorText: { color: "#EF4444", fontSize: 14, marginBottom: 12 },
-  saveBtn: { backgroundColor: "#0EA5E9", borderRadius: 16, paddingVertical: 16, alignItems: "center" },
-  saveBtnDisabled: { backgroundColor: "#E5E7EB" },
-  saveBtnText: { fontWeight: "700", fontSize: 16, color: "#fff" },
-  saveBtnTextDisabled: { color: "#9CA3AF" },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg },
+  quickSection: { gap: space.sm, marginBottom: space.lg },
+  chipRow: { flexDirection: "row", gap: space.sm },
+  card: { marginBottom: space.md },
+  cardName: { marginBottom: space.md },
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.border,
+  },
+  resultLabel: { flex: 1 },
+  placeText: { marginRight: space.md },
+  prBadge: { marginLeft: space.xs },
+  addResultBtn: { marginTop: space.sm },
+  bottomSpacer: { height: space.xxxl },
+  modal: { flex: 1 },
+  modalContent: { paddingHorizontal: space.xxl, paddingTop: space.xxxl, paddingBottom: space.xxxl, gap: space.lg },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  closeBtn: { paddingVertical: space.xs, paddingHorizontal: space.xs },
+  field: { gap: space.sm },
+  swimmerList: { maxHeight: 180 },
+  swimmerListContent: { gap: space.sm, alignItems: "flex-start" },
+  selectedSwimmer: {
+    backgroundColor: color.primaryWash,
+    borderRadius: radius.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  changeBtn: { paddingVertical: space.xs, paddingHorizontal: space.sm },
+  distRow: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  modalInput: { marginBottom: 0 },
 });

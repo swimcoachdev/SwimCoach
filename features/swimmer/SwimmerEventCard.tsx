@@ -1,4 +1,6 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { Text } from "@/components/ui/Text";
+import { color, space, radius, shadow } from "@/constants/theme";
 import { msToTimeString } from "@/lib/utils/time";
 import type { EventGroup } from "@/features/swimmer/swimmer-competitions.lib";
 
@@ -10,7 +12,7 @@ export function SwimmerEventCard({ group }: { group: EventGroup }) {
 
   return (
     <View style={s.card}>
-      <Text style={s.cardTitle}>{event}</Text>
+      <Text variant="heading" style={s.cardTitle}>{event}</Text>
 
       <View style={s.chartWrap}>
         {chrono.map((r, i) => {
@@ -18,8 +20,8 @@ export function SwimmerEventCard({ group }: { group: EventGroup }) {
           const isPR = r.result_time_ms === bestMs;
           return (
             <View key={i} style={s.barWrap}>
-              <View style={[s.bar, { height: barH, backgroundColor: isPR ? "#22C55E" : "#0EA5E9" }]} />
-              <Text style={s.barDate}>{r.competition_date.slice(5)}</Text>
+              <View style={[s.bar, { height: barH, backgroundColor: isPR ? color.good : color.primary }]} />
+              <Text variant="label" color={color.inkFaint} style={s.barDate}>{r.competition_date.slice(5)}</Text>
             </View>
           );
         })}
@@ -30,12 +32,12 @@ export function SwimmerEventCard({ group }: { group: EventGroup }) {
         return (
           <View key={i} style={[s.row, i < sorted.length - 1 && s.rowBorder]}>
             <View style={s.rowLeft}>
-              <Text style={s.rowDate}>{r.competition_date}</Text>
-              <Text style={s.rowComp} numberOfLines={1}>{r.competition_name}</Text>
+              <Text variant="caption" color={color.inkFaint} style={s.rowDate}>{r.competition_date}</Text>
+              <Text variant="caption" color={color.inkMuted} numberOfLines={1}>{r.competition_name}</Text>
             </View>
             <View style={s.rowRight}>
-              <Text style={[s.rowTime, isPR && s.rowTimePR]}>{msToTimeString(r.result_time_ms)}</Text>
-              {isPR && <Text style={s.prBadge}>PR</Text>}
+              <Text variant="bodyStrong" color={isPR ? color.good : color.inkMuted}>{msToTimeString(r.result_time_ms)}</Text>
+              {isPR && <Text variant="label" color={color.onPrimary} style={s.prBadge}>PR</Text>}
             </View>
           </View>
         );
@@ -45,21 +47,18 @@ export function SwimmerEventCard({ group }: { group: EventGroup }) {
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: "#ffffff", borderRadius: 16, padding: 16, marginBottom: 16,
-    shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  cardTitle: { fontSize: 16, fontWeight: "700", color: "#111827", marginBottom: 12 },
-  chartWrap: { flexDirection: "row", alignItems: "flex-end", height: 80, gap: 6, marginBottom: 14, paddingHorizontal: 4 },
+  card: { backgroundColor: color.surface, borderRadius: radius.lg, padding: space.lg, marginBottom: space.lg,
+    ...shadow.card },
+  cardTitle: { marginBottom: space.md },
+  chartWrap: { flexDirection: "row", alignItems: "flex-end", height: 80, gap: space.xs + 2, marginBottom: space.md + 2, paddingHorizontal: space.xs },
   barWrap: { flex: 1, alignItems: "center", justifyContent: "flex-end" },
-  bar: { width: "100%", borderRadius: 4 },
-  barDate: { fontSize: 8, color: "#94a3b8", marginTop: 3 },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10 },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: "#f8fafc" },
-  rowLeft: { flex: 1, marginRight: 8 },
-  rowDate: { fontSize: 12, color: "#94a3b8" },
-  rowComp: { fontSize: 13, color: "#374151", marginTop: 1 },
+  bar: { width: "100%", borderRadius: radius.sm / 2 },
+  barDate: { marginTop: 3 },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: space.sm + 2 },
+  rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
+  rowLeft: { flex: 1, marginRight: space.sm },
+  rowDate: {},
   rowRight: { alignItems: "flex-end" },
-  rowTime: { fontSize: 16, fontWeight: "700", color: "#374151" },
-  rowTimePR: { color: "#22C55E" },
-  prBadge: { fontSize: 10, fontWeight: "700", color: "#ffffff", backgroundColor: "#f59e0b",
-    paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginTop: 2, overflow: "hidden" },
+  prBadge: { backgroundColor: color.warn,
+    paddingHorizontal: space.xs + 1, paddingVertical: 1, borderRadius: radius.sm / 2, marginTop: 2, overflow: "hidden" },
 });

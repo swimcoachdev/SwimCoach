@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { AlertTriangle, Target } from "lucide-react-native";
+import { Screen } from "@/components/ui/Screen";
+import { Text } from "@/components/ui/Text";
+import { PaceClock } from "@/components/ui/PaceClock";
 import { useSwimmerContext } from "@/hooks/useSwimmerContext";
 import { useSaveOnboarding } from "@/lib/queries/onboarding";
 import { useOnboardingStore } from "@/features/onboarding/useOnboardingStore";
+import { color, space } from "@/constants/theme";
 
 export default function OnboardingDone() {
   const router = useRouter();
@@ -29,40 +34,37 @@ export default function OnboardingDone() {
   }, [ready, swimmerId]);
 
   return (
-    <View style={s.container}>
+    <Screen insetTop insetBottom center background={color.surface} style={s.root}>
       {status === "saving" && (
         <>
-          <ActivityIndicator size="large" color="#0EA5E9" style={s.spinner} />
-          <Text style={s.text}>Tallennetaan tietojasi...</Text>
+          <PaceClock size={48} />
+          <Text variant="body" color={color.inkMuted}>Tallennetaan tietojasi...</Text>
         </>
       )}
       {status === "done" && (
-        <>
-          <Text style={s.bigEmoji}>🎯</Text>
-          <Text style={s.doneTitle}>Kaikki valmista!</Text>
-          <Text style={s.doneText}>
+        <View style={s.block}>
+          <Target size={60} color={color.primary} strokeWidth={2} />
+          <Text variant="title">Kaikki valmista!</Text>
+          <Text variant="body" color={color.inkMuted} style={s.center}>
             Lähtötasosi ja tavoitteesi on tallennettu. Hyvää kautta!
           </Text>
-        </>
+        </View>
       )}
       {status === "error" && (
-        <>
-          <Text style={s.bigEmoji}>⚠️</Text>
-          <Text style={s.errorTitle}>Tallennus epäonnistui</Text>
-          <Text style={s.errorText}>Tarkista nettiyhteys ja yritä uudelleen.</Text>
-        </>
+        <View style={s.block}>
+          <AlertTriangle size={60} color={color.accent} strokeWidth={2} />
+          <Text variant="heading">Tallennus epäonnistui</Text>
+          <Text variant="caption" color={color.inkFaint} style={s.center}>
+            Tarkista nettiyhteys ja yritä uudelleen.
+          </Text>
+        </View>
       )}
-    </View>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
-  spinner: { marginBottom: 16 },
-  text: { color: "#6B7280" },
-  bigEmoji: { fontSize: 60, marginBottom: 24 },
-  doneTitle: { fontSize: 24, fontWeight: "700", color: "#111827", marginBottom: 8 },
-  doneText: { color: "#6B7280", textAlign: "center" },
-  errorTitle: { color: "#374151", fontWeight: "600", marginBottom: 8 },
-  errorText: { color: "#9CA3AF", fontSize: 14, textAlign: "center" },
+  root: { paddingHorizontal: space.xxl },
+  block: { alignItems: "center", gap: space.sm },
+  center: { textAlign: "center" },
 });

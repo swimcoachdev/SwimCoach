@@ -1,7 +1,12 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { View, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { Screen } from "@/components/ui/Screen";
+import { Text } from "@/components/ui/Text";
+import { Field } from "@/components/ui/Field";
+import { Button } from "@/components/ui/Button";
 import { StepIndicator } from "@/features/onboarding/StepIndicator";
 import { useOnboardingStore } from "@/features/onboarding/useOnboardingStore";
+import { color, radius, space } from "@/constants/theme";
 
 interface FieldProps {
   label: string;
@@ -15,10 +20,10 @@ interface FieldProps {
 function GoalField({ label, hint, value, onChange, unit, placeholder }: FieldProps) {
   return (
     <View style={s.field}>
-      <Text style={s.fieldLabel}>{label}</Text>
-      <Text style={s.fieldHint}>{hint}</Text>
+      <Text variant="bodyStrong">{label}</Text>
+      <Text variant="caption" color={color.inkFaint} style={s.fieldHint}>{hint}</Text>
       <View style={s.inputRow}>
-        <TextInput
+        <Field
           style={s.input}
           value={value}
           onChangeText={onChange}
@@ -26,7 +31,7 @@ function GoalField({ label, hint, value, onChange, unit, placeholder }: FieldPro
           placeholder={placeholder}
         />
         <View style={s.unit}>
-          <Text style={s.unitText}>{unit}</Text>
+          <Text variant="bodyStrong" color={color.inkMuted}>{unit}</Text>
         </View>
       </View>
     </View>
@@ -38,11 +43,13 @@ export default function VolumeScreen() {
   const { data, setData } = useOnboardingStore();
 
   return (
-    <ScrollView style={s.scroll} keyboardShouldPersistTaps="handled">
-      <View style={s.container}>
+    <Screen insetTop insetBottom>
+      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <StepIndicator current={1} total={4} />
-        <Text style={s.title}>Volyymitavoite</Text>
-        <Text style={s.subtitle}>Kuinka paljon haluat harjoitella tällä kaudella?</Text>
+        <Text variant="title">Volyymitavoite</Text>
+        <Text variant="body" color={color.inkMuted} style={s.subtitle}>
+          Kuinka paljon haluat harjoitella tällä kaudella?
+        </Text>
 
         <GoalField label="Uintimetrit" hint="Esim. 400 km on noin 5 harjoitusta viikossa"
           value={data.targetPoolKm} onChange={v => setData({ targetPoolKm: v })}
@@ -55,33 +62,30 @@ export default function VolumeScreen() {
           unit="krt" placeholder="esim. 200" />
 
         <View style={s.navRow}>
-          <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Text style={s.backText}>← Takaisin</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.nextBtn} onPress={() => router.push("/onboarding/zones")}>
-            <Text style={s.nextText}>Seuraava →</Text>
-          </TouchableOpacity>
+          <Button label="← Takaisin" variant="secondary" onPress={() => router.back()} style={s.navBtn} />
+          <Button label="Seuraava →" onPress={() => router.push("/onboarding/zones")} style={s.navBtn} />
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: "#fff" },
-  container: { paddingHorizontal: 24, paddingTop: 56, paddingBottom: 24 },
-  title: { fontSize: 24, fontWeight: "700", color: "#111827", marginBottom: 4 },
-  subtitle: { color: "#6B7280", marginBottom: 32 },
-  field: { marginBottom: 20 },
-  fieldLabel: { fontWeight: "600", color: "#1F2937", marginBottom: 4 },
-  fieldHint: { fontSize: 12, color: "#9CA3AF", marginBottom: 8 },
-  inputRow: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, overflow: "hidden", backgroundColor: "#fff" },
-  input: { flex: 1, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16 },
-  unit: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: "#F9FAFB" },
-  unitText: { color: "#6B7280", fontWeight: "500" },
-  navRow: { flexDirection: "row", gap: 12, marginTop: 16 },
-  backBtn: { flex: 1, paddingVertical: 16, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 16 },
-  backText: { color: "#4B5563", fontWeight: "500" },
-  nextBtn: { flex: 1, backgroundColor: "#0EA5E9", paddingVertical: 16, alignItems: "center", borderRadius: 16 },
-  nextText: { color: "#fff", fontWeight: "600" },
+  content: { paddingHorizontal: space.xxl, paddingTop: space.md, paddingBottom: space.xxl },
+  subtitle: { marginBottom: space.xxxl },
+  field: { marginBottom: space.xl },
+  fieldHint: { marginTop: space.xs, marginBottom: space.sm },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: color.border,
+    borderRadius: radius.md,
+    overflow: "hidden",
+    backgroundColor: color.surface,
+  },
+  input: { flex: 1, borderWidth: 0, borderRadius: 0 },
+  unit: { paddingHorizontal: space.lg, paddingVertical: space.md, backgroundColor: color.bg },
+  navRow: { flexDirection: "row", gap: space.md, marginTop: space.lg },
+  navBtn: { flex: 1 },
 });

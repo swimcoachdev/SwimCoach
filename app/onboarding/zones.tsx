@@ -1,8 +1,13 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { Check, Minus, Plus } from "lucide-react-native";
+import { Screen } from "@/components/ui/Screen";
+import { Text } from "@/components/ui/Text";
+import { Button } from "@/components/ui/Button";
 import { StepIndicator } from "@/features/onboarding/StepIndicator";
 import { ZONES, ZONE_ORDER, type IntensityZone } from "@/constants/zones";
 import { useOnboardingStore } from "@/features/onboarding/useOnboardingStore";
+import { color, radius, space } from "@/constants/theme";
 
 const ZONE_KEYS = {
   pk: "targetPctPk",
@@ -22,21 +27,22 @@ export default function ZonesScreen() {
     const key = ZONE_KEYS[zone];
     const current = data[key];
     const next = Math.max(0, Math.min(100, current + delta));
-    setData({ [key]: next } as any);
+    setData({ [key]: next } as Partial<typeof data>);
   }
 
   return (
-    <View style={s.container}>
+    <Screen insetTop insetBottom style={s.container}>
       <StepIndicator current={2} total={4} />
-      <Text style={s.title}>Tehoaluejakauma</Text>
-      <Text style={s.subtitle}>
+      <Text variant="title">Tehoaluejakauma</Text>
+      <Text variant="body" color={color.inkMuted} style={s.subtitle}>
         Miten harjoittelusi jakautuu tehoalueille? Summan tulee olla 100%.
       </Text>
 
-      <View style={[s.sumBadge, total === 100 ? s.sumOk : s.sumWarn]}>
-        <Text style={[s.sumText, total === 100 ? s.sumOkText : s.sumWarnText]}>
+      <View style={[s.sumBadge, { backgroundColor: total === 100 ? color.goodWash : color.warnWash }]}>
+        {total === 100 ? <Check size={16} color={color.good} strokeWidth={2.5} /> : null}
+        <Text variant="caption" color={total === 100 ? color.good : color.warn}>
           {total === 100
-            ? "✓ Jakauma täynnä"
+            ? "Jakauma täynnä"
             : total < 100
             ? "Jäljellä " + remaining + "% jaettavaksi"
             : "Ylitetty " + (-remaining) + "% — vähennä jostakin"}
@@ -50,69 +56,61 @@ export default function ZonesScreen() {
             <View key={z} style={{ flex: pct, backgroundColor: ZONES[z].color }} />
           ) : null;
         })}
-        {remaining > 0 && <View style={{ flex: remaining, backgroundColor: "#E5E7EB" }} />}
+        {remaining > 0 && <View style={{ flex: remaining, backgroundColor: color.border }} />}
       </View>
 
       {ZONE_ORDER.map(zone => {
-        const { label, color, description } = ZONES[zone];
+        const { label, color: zoneColor, description } = ZONES[zone];
         const value = data[ZONE_KEYS[zone]];
         return (
           <View key={zone} style={s.zoneRow}>
-            <View style={[s.zoneDot, { backgroundColor: color }]} />
+            <View style={[s.zoneDot, { backgroundColor: zoneColor }]} />
             <View style={s.zoneInfo}>
-              <Text style={s.zoneName}>{label}</Text>
-              <Text style={s.zoneDesc}>{description}</Text>
+              <Text variant="bodyStrong">{label}</Text>
+              <Text variant="caption" color={color.inkFaint}>{description}</Text>
             </View>
             <TouchableOpacity style={s.adjBtn} onPress={() => adjust(zone, -5)}>
-              <Text style={s.adjText}>−</Text>
+              <Minus size={18} color={color.inkMuted} strokeWidth={2.5} />
             </TouchableOpacity>
-            <Text style={[s.zonePct, { color }]}>{value}%</Text>
+            <Text variant="statValue" color={zoneColor} style={s.zonePct}>{value}%</Text>
             <TouchableOpacity style={s.adjBtn} onPress={() => adjust(zone, 5)}>
-              <Text style={s.adjText}>+</Text>
+              <Plus size={18} color={color.inkMuted} strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
         );
       })}
 
       <View style={s.navRow}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Text style={s.backText}>← Takaisin</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.nextBtn, total !== 100 && s.nextBtnDisabled]}
+        <Button label="← Takaisin" variant="secondary" onPress={() => router.back()} style={s.navBtn} />
+        <Button
+          label="Seuraava →"
           onPress={() => total === 100 && router.push("/onboarding/goal")}
           disabled={total !== 100}
-        >
-          <Text style={s.nextText}>Seuraava →</Text>
-        </TouchableOpacity>
+          style={s.navBtn}
+        />
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 24, paddingTop: 56 },
-  title: { fontSize: 24, fontWeight: "700", color: "#111827", marginBottom: 4 },
-  subtitle: { color: "#6B7280", marginBottom: 8 },
-  sumBadge: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8, marginBottom: 24 },
-  sumOk: { backgroundColor: "#F0FDF4" },
-  sumWarn: { backgroundColor: "#FFFBEB" },
-  sumText: { fontSize: 14, fontWeight: "500" },
-  sumOkText: { color: "#15803D" },
-  sumWarnText: { color: "#B45309" },
-  vizBar: { flexDirection: "row", height: 16, borderRadius: 8, overflow: "hidden", marginBottom: 24 },
-  zoneRow: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
-  zoneDot: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },
+  container: { paddingHorizontal: space.xxl },
+  subtitle: { marginBottom: space.sm },
+  sumBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    borderRadius: radius.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    marginBottom: space.xxl,
+  },
+  vizBar: { flexDirection: "row", height: 16, borderRadius: radius.sm, overflow: "hidden", marginBottom: space.xxl },
+  zoneRow: { flexDirection: "row", alignItems: "center", marginBottom: space.lg },
+  zoneDot: { width: 12, height: 12, borderRadius: radius.sm, marginRight: space.md },
   zoneInfo: { flex: 1 },
-  zoneName: { fontWeight: "600", color: "#1F2937" },
-  zoneDesc: { fontSize: 12, color: "#9CA3AF" },
-  adjBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center" },
-  adjText: { color: "#4B5563", fontWeight: "700", fontSize: 18 },
-  zonePct: { width: 48, textAlign: "center", fontWeight: "700", fontSize: 16 },
-  navRow: { flexDirection: "row", gap: 12, marginTop: "auto", paddingBottom: 32 },
-  backBtn: { flex: 1, paddingVertical: 16, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 16 },
-  backText: { color: "#4B5563", fontWeight: "500" },
-  nextBtn: { flex: 1, backgroundColor: "#0EA5E9", paddingVertical: 16, alignItems: "center", borderRadius: 16 },
-  nextBtnDisabled: { backgroundColor: "#D1D5DB" },
-  nextText: { color: "#fff", fontWeight: "600" },
+  adjBtn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: color.bg, alignItems: "center", justifyContent: "center" },
+  zonePct: { width: 56, textAlign: "center" },
+  navRow: { flexDirection: "row", gap: space.md, marginTop: "auto", paddingBottom: space.xxxl },
+  navBtn: { flex: 1 },
 });

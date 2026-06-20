@@ -1,8 +1,9 @@
-import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { useSwimmerContext } from "@/hooks/useSwimmerContext";
 import { useSwimmerProfile, useTimeProgression, useRecentWorkouts } from "@/lib/queries/swimmers";
 import { SwimmerHome } from "@/features/swimmer/SwimmerHome";
+import { Screen } from "@/components/ui/Screen";
+import { PaceClock } from "@/components/ui/PaceClock";
 
 export default function SwimmerDashboard() {
   const { signOut } = useAuth();
@@ -20,7 +21,11 @@ export default function SwimmerDashboard() {
   }
 
   if (!ready || profileQ.isLoading || !profileQ.data) {
-    return <View style={s.center}><ActivityIndicator size="large" color="#0EA5E9" /></View>;
+    return (
+      <Screen center>
+        <PaceClock size={48} />
+      </Screen>
+    );
   }
 
   return (
@@ -35,7 +40,3 @@ export default function SwimmerDashboard() {
     />
   );
 }
-
-const s = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-});
