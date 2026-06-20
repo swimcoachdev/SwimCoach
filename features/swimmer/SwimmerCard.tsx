@@ -61,6 +61,15 @@ export function SwimmerCard({ swimmer, lens, rank, seasonProgress, onPress }: Pr
           )}
         </View>
         <Text variant="caption">{hero.caption}</Text>
+        {/* Pace bar anchors to the hero %, so only when the hero IS the goal % */}
+        {heroLens === "goal" && hasGoal && (
+          <PaceBar
+            pct={goalPct(swimmer)}
+            markerPct={Math.round(seasonProgress * 100)}
+            tone={track.tone}
+            style={styles.heroPace}
+          />
+        )}
       </View>
 
       <View style={styles.hr} />
@@ -82,15 +91,6 @@ export function SwimmerCard({ swimmer, lens, rank, seasonProgress, onPress }: Pr
         ))}
       </View>
 
-      {/* Season-goal pace — fill vs. the where-they-should-be marker */}
-      {hasGoal && (
-        <PaceBar
-          pct={goalPct(swimmer)}
-          markerPct={Math.round(seasonProgress * 100)}
-          tone={track.tone}
-          style={styles.pace}
-        />
-      )}
     </TouchableOpacity>
   );
 }
@@ -121,5 +121,5 @@ const styles = StyleSheet.create({
   statRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   statValue: { ...typeStyles.statValue, fontSize: 17 },
 
-  pace: { marginTop: space.lg },
+  heroPace: { marginTop: space.sm },
 });
