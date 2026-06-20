@@ -8,16 +8,25 @@ import { Button } from "@/components/ui/Button";
 import { signIn } from "@/lib/queries/auth";
 import { color, space } from "@/constants/theme";
 
+/** Seed coach account (see seed.sql / CLAUDE.md). Dev-only shortcut. */
+const DEV_CREDENTIALS = { email: "coach@swimcoach.test", password: "swimcoach" };
+
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function submit() {
+  async function submit(creds?: { email: string; password: string }) {
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(creds?.email ?? email, creds?.password ?? password);
     if (error) Alert.alert("Virhe kirjautumisessa", error.message);
     setLoading(false);
+  }
+
+  function devLogin() {
+    setEmail(DEV_CREDENTIALS.email);
+    setPassword(DEV_CREDENTIALS.password);
+    submit(DEV_CREDENTIALS);
   }
 
   return (
@@ -37,7 +46,10 @@ export default function LoginScreen() {
           autoCapitalize="none"
         />
         <Field placeholder="Salasana" value={password} onChangeText={setPassword} secureTextEntry />
-        <Button label="Kirjaudu sisään" onPress={submit} loading={loading} />
+        <Button label="Kirjaudu sisään" onPress={() => submit()} loading={loading} />
+        {__DEV__ && (
+          <Button label="Dev-kirjautuminen" variant="ghost" onPress={devLogin} disabled={loading} />
+        )}
       </View>
     </Screen>
   );
