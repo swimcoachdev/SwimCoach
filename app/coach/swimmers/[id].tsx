@@ -1,16 +1,28 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, ScrollView, TouchableOpacity, StyleSheet, type DimensionValue } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronLeft, Target } from "lucide-react-native";
+import { Text } from "@/components/ui/Text";
+import { Badge } from "@/components/ui/Badge";
+import { PaceClock } from "@/components/ui/PaceClock";
 import { getSwimmerProfile, getTimeProgression, getSwimmerSeasonDetail } from "@/lib/queries/swimmers";
 import { msToTimeString } from "@/lib/utils/time";
+import { km, trackStatus, type SwimmerSummary } from "@/lib/swimmer-card.lib";
 import { STROKES } from "@/constants/strokes";
+import { ZONES, ZONE_ORDER } from "@/constants/zones";
+import { color, space, radius, shadow, fontFamily } from "@/constants/theme";
 
-const BRAND = "#0EA5E9";
+function seasonProgressNow(): number {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1).getTime();
+  const end = new Date(now.getFullYear(), 11, 31).getTime();
+  return (now.getTime() - start) / (end - start);
+}
 
-function ProgressBar({ pct, color = BRAND }: { pct: number; color?: string }) {
+function ProgressBar({ pct, fill = color.primary }: { pct: number; fill?: string }) {
   return (
     <View style={styles.barTrack}>
-      <View style={[styles.barFill, { width: `${Math.min(pct, 100)}%` as any, backgroundColor: color }]} />
+      <View style={[styles.barFill, { width: `${Math.min(pct, 100)}%` as DimensionValue, backgroundColor: fill }]} />
     </View>
   );
 }
@@ -19,54 +31,49 @@ function GoalRow({ label, current, target, unit = "" }: {
   label: string; current: number; target: number; unit?: string;
 }) {
   const pct = target > 0 ? Math.round((current / target) * 100) : 0;
+  const fill = pct >= 80 ? color.good : pct >= 50 ? color.warn : color.risk;
   return (
     <View style={styles.goalRow}>
       <View style={styles.goalRowTop}>
-        <Text style={styles.goalLabel}>{label}</Text>
-        <Text style={styles.goalValue}>
+        <Text variant="caption" color={color.inkMuted}>{label}</Text>
+        <Text variant="bodyStrong">
           {current}{unit} / {target}{unit}
-          <Text style={styles.goalPct}> {pct}%</Text>
+          <Text variant="bodyStrong" color={color.primaryInk}> {pct}%</Text>
         </Text>
       </View>
-      <ProgressBar pct={pct} />
+      <ProgressBar pct={pct} fill={fill} />
     </View>
   );
 }
 
-const ZONE_COLORS: Record<string, string> = {
-  pk: "#38BDF8", vk: "#34D399", mk: "#FBBF24", mak: "#F87171",
-};
-const ZONE_LABELS: Record<string, string> = {
-  pk: "PK", vk: "VK", mk: "MK", mak: "MAK",
-};
-
-function ZoneBar({ actual, target }: { actual: any; target: any }) {
-  const zones = ["pk", "vk", "mk", "mak"] as const;
-  const total = zones.reduce((s, z) => s + (actual[z] ?? 0), 0);
+function ZoneBar({ actual, target }: {
+  actual: Record<string, number>;
+  target?: Record<string, number>;
+}) {
+  const total = ZONE_ORDER.reduce((s, z) => s + (actual[z] ?? 0), 0);
   return (
     <View>
       <View style={styles.zoneBarRow}>
-        {zones.map(z => {
+        {ZONE_ORDER.map((z) => {
           const pct = total > 0 ? (actual[z] ?? 0) / total * 100 : 0;
           return pct > 0 ? (
-            <View key={z} style={[styles.zoneSegment, { flex: pct, backgroundColor: ZONE_COLORS[z] }]} />
+            <View key={z} style={[styles.zoneSegment, { flex: pct, backgroundColor: ZONES[z].color }]} />
           ) : null;
         })}
       </View>
       <View style={styles.zoneLegend}>
-        {zones.map(z => {
+        {ZONE_ORDER.map((z) => {
           const pct = total > 0 ? Math.round((actual[z] ?? 0) / total * 100) : 0;
           const tgt = target?.[z] ?? 0;
           const diff = pct - tgt;
+          const diffColor = Math.abs(diff) <= 3 ? color.good : diff < 0 ? color.risk : color.warn;
           return (
             <View key={z} style={styles.zoneLegendItem}>
-              <View style={[styles.zoneDot, { backgroundColor: ZONE_COLORS[z] }]} />
-              <Text style={styles.zoneLabel}>{ZONE_LABELS[z]}</Text>
-              <Text style={styles.zonePct}>{pct}%</Text>
+              <View style={[styles.zoneDot, { backgroundColor: ZONES[z].color }]} />
+              <Text variant="caption" color={color.inkMuted}>{ZONES[z].label}</Text>
+              <Text variant="caption" color={color.ink} style={styles.zonePct}>{pct}%</Text>
               {tgt > 0 && (
-                <Text style={[styles.zoneDiff, { color: Math.abs(diff) <= 3 ? "#22C55E" : diff < 0 ? "#F87171" : "#FBBF24" }]}>
-                  {diff > 0 ? "+" : ""}{diff}
-                </Text>
+                <Text variant="label" color={diffColor}>{diff > 0 ? "+" : ""}{diff}</Text>
               )}
             </View>
           );
@@ -96,7 +103,7 @@ export default function SwimmerProfileScreen() {
   if (!profile) {
     return (
       <View style={styles.loading}>
-        <Text style={styles.loadingText}>Ladataan...</Text>
+        <PaceClock size={48} />
       </View>
     );
   }
@@ -117,10 +124,11 @@ export default function SwimmerProfileScreen() {
     mak: goal.target_pct_mak ?? 0,
   } : undefined;
 
-  const currentKm = summary ? Math.round((summary.total_pool_m ?? 0) / 100) / 10 : 0;
+  const currentKm = km(summary?.total_pool_m ?? 0);
   const targetKm = goal?.target_pool_km ?? 0;
   const currentWorkouts = summary?.total_workouts ?? 0;
   const targetWorkouts = goal?.target_workouts ?? 0;
+  const track = summary ? trackStatus(summary as SwimmerSummary, seasonProgressNow()) : null;
 
   // Group progression by event
   const progressionByEvent: Record<string, any[]> = {};
@@ -134,28 +142,37 @@ export default function SwimmerProfileScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Takaisin</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <ChevronLeft size={18} color={color.primary} strokeWidth={2.5} />
+          <Text variant="bodyStrong" color={color.primary}>Takaisin</Text>
         </TouchableOpacity>
-        <Text style={styles.name}>{profile.full_name}</Text>
-        {profile.birth_date && (
-          <Text style={styles.birthYear}>s. {new Date(profile.birth_date).getFullYear()}</Text>
-        )}
+        <View style={styles.nameRow}>
+          <View style={styles.nameWrap}>
+            <Text variant="title">{profile.full_name}</Text>
+            {profile.birth_date && (
+              <Text variant="caption">s. {new Date(profile.birth_date).getFullYear()}</Text>
+            )}
+          </View>
+          {track && track.tone !== "default" && <Badge label={track.label} tone={track.tone} />}
+        </View>
       </View>
 
       <View style={styles.body}>
         {/* Vuositavoite */}
         {goal && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Vuositavoite {year}</Text>
+            <Text variant="heading" style={styles.cardTitle}>Vuositavoite {year}</Text>
             <GoalRow label="Uintimetrit" current={currentKm} target={targetKm} unit=" km" />
             <GoalRow label="Harjoituskerrat" current={currentWorkouts} target={targetWorkouts} />
             {goal.target_stroke && (
               <View style={styles.raceGoal}>
-                <Text style={styles.raceGoalText}>
-                  🎯 {goal.target_distance}m {STROKES[goal.target_stroke as keyof typeof STROKES]?.label}
-                </Text>
-                <Text style={styles.raceGoalTime}>
+                <View style={styles.raceGoalLeft}>
+                  <Target size={15} color={color.primaryInk} strokeWidth={2.2} />
+                  <Text variant="bodyStrong" color={color.primaryInk}>
+                    {goal.target_distance}m {STROKES[goal.target_stroke as keyof typeof STROKES]?.label}
+                  </Text>
+                </View>
+                <Text variant="mono" color={color.primaryInk}>
                   {goal.target_time_ms ? msToTimeString(goal.target_time_ms) : "—"}
                 </Text>
               </View>
@@ -165,24 +182,24 @@ export default function SwimmerProfileScreen() {
 
         {/* Tehoaluejakauma */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tehoaluejakauma</Text>
+          <Text variant="heading" style={styles.cardTitle}>Tehoaluejakauma</Text>
           {(summary?.total_pool_m ?? 0) > 0
             ? <ZoneBar actual={actualZones} target={targetZones} />
-            : <Text style={styles.emptyText}>Ei harjoitusdataa vielä.</Text>
+            : <Text variant="body" color={color.inkMuted}>Ei harjoitusdataa vielä.</Text>
           }
         </View>
 
         {/* PR:t */}
         {prs.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Henkilökohtaiset ennätykset</Text>
+            <Text variant="heading" style={styles.cardTitle}>Henkilökohtaiset ennätykset</Text>
             {prs.map((pr: any) => (
               <View key={pr.id} style={styles.prRow}>
-                <Text style={styles.prEvent}>
+                <Text variant="body" color={color.ink} style={styles.flex}>
                   {pr.distance}m {STROKES[pr.stroke as keyof typeof STROKES]?.label ?? pr.stroke}
                 </Text>
-                <Text style={styles.prTime}>{msToTimeString(pr.best_time_ms)}</Text>
-                {pr.is_baseline && <Text style={styles.prBaseline}>lähtötaso</Text>}
+                <Text variant="mono" color={color.primaryInk}>{msToTimeString(pr.best_time_ms)}</Text>
+                {pr.is_baseline && <Text variant="label" style={styles.baseline}>lähtötaso</Text>}
               </View>
             ))}
           </View>
@@ -198,19 +215,19 @@ export default function SwimmerProfileScreen() {
           return (
             <View key={event} style={styles.card}>
               <View style={styles.eventHeader}>
-                <Text style={styles.cardTitle}>{event}</Text>
+                <Text variant="heading">{event}</Text>
                 {improved != null && (
-                  <Text style={[styles.improvement, { color: improved > 0 ? "#22C55E" : "#F87171" }]}>
+                  <Text variant="bodyStrong" color={improved > 0 ? color.good : color.risk}>
                     {improved > 0 ? "−" : "+"}{msToTimeString(Math.abs(improved))}
                   </Text>
                 )}
               </View>
               {results.slice(-5).map((r: any) => (
                 <View key={r.competition_date + r.result_time_ms} style={styles.resultRow}>
-                  <Text style={styles.resultDate}>{r.competition_date}</Text>
-                  <Text style={styles.resultTime}>{msToTimeString(r.result_time_ms)}</Text>
+                  <Text variant="caption" style={styles.flex}>{r.competition_date}</Text>
+                  <Text variant="mono">{msToTimeString(r.result_time_ms)}</Text>
                   {r.improvement_pct != null && r.improvement_pct > 0 && (
-                    <Text style={styles.resultImprovement}>−{r.improvement_pct}%</Text>
+                    <Text variant="label" color={color.good} style={styles.resultImprovement}>−{r.improvement_pct}%</Text>
                   )}
                 </View>
               ))}
@@ -223,62 +240,67 @@ export default function SwimmerProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F8FAFC" },
-  scrollContent: { paddingBottom: 32 },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-  loadingText: { color: "#94A3B8" },
+  screen: { flex: 1, backgroundColor: color.bg },
+  scrollContent: { paddingBottom: space.xxxl },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: color.bg },
+  flex: { flex: 1 },
 
-  header: { backgroundColor: "#fff", paddingTop: 56, paddingBottom: 16, paddingHorizontal: 16,
-    shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  backBtn: { marginBottom: 8 },
-  backText: { color: BRAND, fontSize: 14 },
-  name: { fontSize: 22, fontWeight: "700", color: "#0F172A" },
-  birthYear: { fontSize: 13, color: "#94A3B8", marginTop: 2 },
+  header: {
+    backgroundColor: color.surface,
+    paddingTop: 56,
+    paddingBottom: space.lg,
+    paddingHorizontal: space.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.border,
+  },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 2, marginBottom: space.sm, marginLeft: -4 },
+  nameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.sm },
+  nameWrap: { flex: 1, gap: 2 },
 
-  body: { padding: 16 },
-  card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12,
-    shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
-  cardTitle: { fontSize: 14, fontWeight: "600", color: "#0F172A", marginBottom: 12 },
-  emptyText: { fontSize: 13, color: "#94A3B8" },
+  body: { padding: space.lg, gap: space.md },
+  card: {
+    backgroundColor: color.surface,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.border,
+    padding: space.lg,
+    ...shadow.card,
+  },
+  cardTitle: { marginBottom: space.md },
 
   // Goal rows
-  goalRow: { marginBottom: 10 },
-  goalRowTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
-  goalLabel: { fontSize: 13, color: "#475569" },
-  goalValue: { fontSize: 13, color: "#0F172A", fontWeight: "500" },
-  goalPct: { color: BRAND },
-  barTrack: { height: 6, backgroundColor: "#F1F5F9", borderRadius: 3, overflow: "hidden" },
-  barFill: { height: 6, borderRadius: 3 },
+  goalRow: { marginBottom: space.md },
+  goalRowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space.xs },
+  barTrack: { height: 6, backgroundColor: color.bg, borderRadius: radius.pill, overflow: "hidden" },
+  barFill: { height: 6, borderRadius: radius.pill },
 
   // Race goal
-  raceGoal: { marginTop: 8, backgroundColor: "#EFF6FF", borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", justifyContent: "space-between" },
-  raceGoalText: { fontSize: 13, color: "#1D4ED8" },
-  raceGoalTime: { fontSize: 13, fontWeight: "700", color: "#1D4ED8" },
+  raceGoal: {
+    marginTop: space.sm,
+    backgroundColor: color.primaryWash,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  raceGoalLeft: { flexDirection: "row", alignItems: "center", gap: space.sm },
 
   // Zone bar
-  zoneBarRow: { flexDirection: "row", height: 10, borderRadius: 5, overflow: "hidden", marginBottom: 10 },
+  zoneBarRow: { flexDirection: "row", height: 10, borderRadius: radius.pill, overflow: "hidden", marginBottom: space.md, gap: 1.5 },
   zoneSegment: { height: 10 },
   zoneLegend: { flexDirection: "row", justifyContent: "space-between" },
-  zoneLegendItem: { flexDirection: "row", alignItems: "center", gap: 3 },
+  zoneLegendItem: { flexDirection: "row", alignItems: "center", gap: space.xs },
   zoneDot: { width: 8, height: 8, borderRadius: 4 },
-  zoneLabel: { fontSize: 11, color: "#64748B" },
-  zonePct: { fontSize: 11, fontWeight: "600", color: "#0F172A" },
-  zoneDiff: { fontSize: 10 },
+  zonePct: { fontFamily: fontFamily.semibold, color: color.ink },
 
   // PRs
-  prRow: { flexDirection: "row", alignItems: "center", paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: "#F8FAFC" },
-  prEvent: { flex: 1, fontSize: 13, color: "#334155" },
-  prTime: { fontSize: 13, fontWeight: "700", color: BRAND },
-  prBaseline: { fontSize: 11, color: "#94A3B8", marginLeft: 8 },
+  prRow: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
+  baseline: { color: color.inkFaint },
 
   // Competition results
-  eventHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-  improvement: { fontSize: 13, fontWeight: "700" },
-  resultRow: { flexDirection: "row", alignItems: "center", paddingVertical: 6,
-    borderBottomWidth: 1, borderBottomColor: "#F8FAFC" },
-  resultDate: { flex: 1, fontSize: 12, color: "#94A3B8" },
-  resultTime: { fontSize: 13, fontWeight: "500", color: "#1E293B" },
-  resultImprovement: { fontSize: 11, color: "#22C55E", marginLeft: 8 },
+  eventHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: space.md },
+  resultRow: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.xs, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
+  resultImprovement: { marginLeft: space.xs },
 });
