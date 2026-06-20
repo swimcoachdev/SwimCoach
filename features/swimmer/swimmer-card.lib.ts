@@ -41,7 +41,7 @@ export const LENSES: Lens[] = [
   { key: "goal", label: "Tavoite" },
   { key: "volume", label: "Volyymi" },
   { key: "workouts", label: "Harjoitukset" },
-  { key: "teho", label: "Teho" },
+  { key: "teho", label: "Osuvuus" },
 ];
 
 /* ── Small derivations ────────────────────────────────────────────────────────── */
@@ -137,7 +137,7 @@ export function subStats(s: SwimmerSummary, lens: LensKey): SubStat[] {
   const stats: (SubStat & { lens: LensKey })[] = [
     { lens: "volume", label: "Volyymi", value: String(km(s.total_pool_m)), unit: "km" },
     { lens: "workouts", label: "Harjoitukset", value: String(n(s.total_workouts)), unit: s.target_workouts ? `/${s.target_workouts}` : undefined },
-    { lens: "teho", label: "Teho", value: teho == null ? "–" : String(teho), unit: teho == null ? undefined : "%", tone: teho == null ? "default" : teho >= 85 ? "good" : teho >= 70 ? "warn" : "risk" },
+    { lens: "teho", label: "Osuvuus", value: teho == null ? "–" : String(teho), unit: teho == null ? undefined : "%", tone: teho == null ? "default" : teho >= 85 ? "good" : teho >= 70 ? "warn" : "risk" },
     { lens: "goal", label: "Tavoite", value: String(goalPct(s)), unit: "%" },
   ];
   return stats.map(({ lens: l, ...rest }) => ({ ...rest, active: l === lens }));
