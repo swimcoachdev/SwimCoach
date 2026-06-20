@@ -1,36 +1,23 @@
-import { useEffect, useState } from "react";
 import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from "react-native";
 import { useSwimmerContext } from "@/hooks/useSwimmerContext";
-import { getYearlyGoal } from "@/lib/queries/goals";
+import { useYearlyGoal } from "@/lib/queries/goals";
+import { targetZones } from "@/features/swimmer/swimmer-detail.lib";
 import { msToTimeString } from "@/lib/utils/time";
 import { STROKES } from "@/constants/strokes";
 import { ZONES, ZONE_ORDER } from "@/constants/zones";
 
-const ZONE_KEYS: Record<string, string> = {
-  pk: "target_pct_pk", vk: "target_pct_vk",
-  mk: "target_pct_mk", mak: "target_pct_mak",
-};
-
 export default function GoalsScreen() {
   const { swimmerId } = useSwimmerContext();
-  const [goal, setGoal] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const year = new Date().getFullYear();
+  const goalQ = useYearlyGoal(swimmerId ?? undefined, year);
 
-  useEffect(() => {
-    if (!swimmerId) return;
-    getYearlyGoal(swimmerId, year).then(({ data }) => {
-      setGoal(data);
-      setLoading(false);
-    });
-  }, [swimmerId]);
-
-  if (loading) return (
+  if (goalQ.isLoading) return (
     <View style={s.center}>
       <ActivityIndicator color="#0EA5E9" />
     </View>
   );
 
+  const goal = goalQ.data;
   if (!goal) return (
     <View style={s.center}>
       <Text style={s.emptyIcon}>🎯</Text>
@@ -41,6 +28,8 @@ export default function GoalsScreen() {
     </View>
   );
 
+  const zones = targetZones(goal) ?? { pk: 0, vk: 0, mk: 0, mak: 0 };
+
   return (
     <ScrollView style={s.root}>
       <View style={s.header}>
@@ -49,7 +38,6 @@ export default function GoalsScreen() {
       </View>
 
       <View style={s.content}>
-        {/* Volyymi */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Volyymi</Text>
           {[
@@ -64,32 +52,22 @@ export default function GoalsScreen() {
           ))}
         </View>
 
-        {/* Tehoaluejakauma */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Tehoaluejakauma</Text>
           <View style={s.zoneBar}>
-            {ZONE_ORDER.map(z => {
-              const pct = goal[ZONE_KEYS[z]] ?? 0;
-              return pct > 0 ? (
-                <View key={z} style={{ flex: pct, backgroundColor: ZONES[z].color }} />
-              ) : null;
-            })}
+            {ZONE_ORDER.map((z) =>
+              zones[z] > 0 ? <View key={z} style={{ flex: zones[z], backgroundColor: ZONES[z].color }} /> : null,
+            )}
           </View>
-          {ZONE_ORDER.map((z, i) => {
-            const pct = goal[ZONE_KEYS[z]] ?? 0;
-            return (
-              <View key={z} style={[s.zoneRow, i < ZONE_ORDER.length - 1 && s.rowBorder]}>
-                <View style={[s.zoneDot, { backgroundColor: ZONES[z].color }]} />
-                <Text style={s.zoneLabel}>
-                  {ZONES[z].label} — {ZONES[z].description}
-                </Text>
-                <Text style={[s.zonePct, { color: ZONES[z].color }]}>{pct}%</Text>
-              </View>
-            );
-          })}
+          {ZONE_ORDER.map((z, i) => (
+            <View key={z} style={[s.zoneRow, i < ZONE_ORDER.length - 1 && s.rowBorder]}>
+              <View style={[s.zoneDot, { backgroundColor: ZONES[z].color }]} />
+              <Text style={s.zoneLabel}>{ZONES[z].label} — {ZONES[z].description}</Text>
+              <Text style={[s.zonePct, { color: ZONES[z].color }]}>{zones[z]}%</Text>
+            </View>
+          ))}
         </View>
 
-        {/* Kisatavoite */}
         {goal.target_stroke && (
           <View style={s.card}>
             <Text style={s.cardTitle}>Kisatavoite</Text>
@@ -148,18 +126,8 @@ const s = StyleSheet.create({
   rowBorder: { borderBottomWidth: 1, borderBottomColor: "#f8fafc" },
   rowLabel: { fontSize: 14, color: "#6b7280" },
   rowValue: { fontSize: 14, fontWeight: "600", color: "#111827" },
-  zoneBar: {
-    flexDirection: "row",
-    height: 12,
-    borderRadius: 6,
-    overflow: "hidden",
-    marginBottom: 14,
-  },
-  zoneRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
+  zoneBar: { flexDirection: "row", height: 12, borderRadius: 6, overflow: "hidden", marginBottom: 14 },
+  zoneRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10 },
   zoneDot: { width: 12, height: 12, borderRadius: 6, marginRight: 10 },
   zoneLabel: { flex: 1, fontSize: 13, color: "#374151" },
   zonePct: { fontSize: 14, fontWeight: "700" },

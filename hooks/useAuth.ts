@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { signOut } from "@/lib/queries/auth";
+import { authKeys, getUserRole, signOut } from "@/lib/queries/auth";
 import type { Session, User } from "@supabase/supabase-js";
 
 export type UserRole = "coach" | "swimmer" | "club_admin";
@@ -15,35 +16,33 @@ interface AuthState {
 
 export function useAuth(): AuthState {
   const [session, setSession] = useState<Session | null>(null);
-  const [role, setRole] = useState<UserRole | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [sessionLoading, setSessionLoading] = useState(true);
 
+  // The auth session is a genuine subscription (not server-state we fetch), so it
+  // stays an effect. The role lookup that hangs off it is server state → a query.
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) fetchRole(session.user.id);
-      else setLoading(false);
+      setSessionLoading(false);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        if (session) fetchRole(session.user.id);
-        else { setRole(null); setLoading(false); }
-      }
-    );
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setSessionLoading(false);
+    });
     return () => subscription.unsubscribe();
   }, []);
 
-  async function fetchRole(userId: string) {
-    const { data } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", userId)
-      .single();
-    setRole(data?.role ?? null);
-    setLoading(false);
-  }
+  const roleQ = useQuery({
+    queryKey: authKeys.role(session?.user?.id ?? ""),
+    enabled: !!session?.user,
+    queryFn: () => getUserRole(session!.user.id),
+  });
 
-  return { session, user: session?.user ?? null, role, loading, signOut };
+  return {
+    session,
+    user: session?.user ?? null,
+    role: (roleQ.data ?? null) as UserRole | null,
+    loading: sessionLoading || (!!session && roleQ.isLoading),
+    signOut,
+  };
 }

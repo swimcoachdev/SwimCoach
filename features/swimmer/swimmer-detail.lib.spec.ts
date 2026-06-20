@@ -6,6 +6,7 @@ function row(over: Partial<ProgressionRow>): ProgressionRow {
     distance: "100",
     stroke: "vapaa",
     competition_date: "2026-01-01",
+    competition_name: null,
     result_time_ms: 60_000,
     improvement_pct: null,
     ...over,

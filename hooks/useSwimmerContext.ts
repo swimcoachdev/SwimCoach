@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
+import { authKeys, getSwimmerContext } from "@/lib/queries/auth";
 import { useAuth } from "./useAuth";
 
 interface SwimmerContext {
@@ -8,21 +8,18 @@ interface SwimmerContext {
   ready: boolean;
 }
 
+/** Swimmer identity (swimmer + club ids) as server state, resolved once per user. */
 export function useSwimmerContext(): SwimmerContext {
   const { user } = useAuth();
-  const [ctx, setCtx] = useState<SwimmerContext>({ swimmerId: null, clubId: null, ready: false });
+  const q = useQuery({
+    queryKey: authKeys.swimmerContext(user?.id ?? ""),
+    enabled: !!user,
+    queryFn: () => getSwimmerContext(user!.id),
+  });
 
-  useEffect(() => {
-    if (!user) return;
-    async function load() {
-      const { data: u } = await supabase
-        .from("users").select("club_id").eq("id", user!.id).single();
-      const { data: s } = await supabase
-        .from("swimmers").select("id").eq("user_id", user!.id).single();
-      setCtx({ swimmerId: s?.id ?? null, clubId: u?.club_id ?? null, ready: true });
-    }
-    load();
-  }, [user]);
-
-  return ctx;
+  return {
+    swimmerId: q.data?.swimmerId ?? null,
+    clubId: q.data?.clubId ?? null,
+    ready: !!user && q.isSuccess,
+  };
 }

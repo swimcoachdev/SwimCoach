@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useRealtimeInvalidation } from "@/lib/realtime/useRealtimeInvalidation";
 import type { SwimmerSummary } from "@/features/swimmer/swimmer-card.lib";
 import type { ProgressionRow, SwimmerProfile } from "@/features/swimmer/swimmer-detail.lib";
+import type { RecentWorkout } from "@/features/swimmer/swimmer-dashboard.lib";
 
 /** Query-key factory — the single source of truth for invalidation. */
 export const swimmerKeys = {
@@ -13,6 +14,8 @@ export const swimmerKeys = {
   progression: (swimmerId: string) => [...swimmerKeys.all, "progression", swimmerId] as const,
   seasonDetail: (swimmerId: string, year: number) =>
     [...swimmerKeys.all, "season-detail", swimmerId, year] as const,
+  recentWorkouts: (swimmerId: string, limit: number) =>
+    [...swimmerKeys.all, "recent-workouts", swimmerId, limit] as const,
 };
 
 /**
@@ -113,6 +116,19 @@ export async function getSwimmerSeasonDetail(swimmerId: string, year: number) {
     .eq("swimmer_id", swimmerId)
     .eq("season_year", year)
     .maybeSingle();
+}
+
+/** A swimmer's recent workouts (with per-workout sets), newest first. */
+export function useRecentWorkouts(swimmerId: string | undefined, limit = 20) {
+  return useQuery({
+    queryKey: swimmerKeys.recentWorkouts(swimmerId ?? "", limit),
+    enabled: !!swimmerId,
+    queryFn: async () => {
+      const { data, error } = await getRecentWorkouts(swimmerId!, limit);
+      if (error) throw error;
+      return (data ?? []) as RecentWorkout[];
+    },
+  });
 }
 
 export async function getRecentWorkouts(swimmerId: string, limit = 10) {

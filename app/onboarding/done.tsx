@@ -1,74 +1,32 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { supabase } from "@/lib/supabase";
-import { upsertYearlyGoal } from "@/lib/queries/goals";
+import { useSwimmerContext } from "@/hooks/useSwimmerContext";
+import { useSaveOnboarding } from "@/lib/queries/onboarding";
 import { useOnboardingStore } from "@/features/onboarding/useOnboardingStore";
-import { timeStringToMs } from "@/lib/utils/time";
-import { useAuth } from "@/hooks/useAuth";
 
 export default function OnboardingDone() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { swimmerId, ready } = useSwimmerContext();
   const { data, reset } = useOnboardingStore();
+  const saveOnboarding = useSaveOnboarding();
   const [status, setStatus] = useState<"saving" | "done" | "error">("saving");
+  const started = useRef(false);
 
-  useEffect(() => { save(); }, []);
-
-  async function save() {
-    try {
-      const { data: swimmer } = await supabase
-        .from("swimmers")
-        .select("id")
-        .eq("user_id", user?.id)
-        .single();
-
-      if (!swimmer) throw new Error("Uimaria ei löydy");
-
-      const year = new Date().getFullYear();
-
-      await upsertYearlyGoal({
-        swimmer_id: swimmer.id,
-        season_year: year,
-        target_pool_km: data.targetPoolKm ? parseFloat(data.targetPoolKm) : undefined,
-        target_dryland_hours: data.targetDrylandHours ? parseFloat(data.targetDrylandHours) : undefined,
-        target_workouts: data.targetWorkouts ? parseInt(data.targetWorkouts) : undefined,
-        target_pct_pk: data.targetPctPk,
-        target_pct_vk: data.targetPctVk,
-        target_pct_mk: data.targetPctMk,
-        target_pct_mak: data.targetPctMak,
-        target_stroke: data.goalStroke,
-        target_distance: String(data.goalDistance),
-        target_time_ms: data.goalTimeString ? timeStringToMs(data.goalTimeString) : undefined,
-      });
-
-      if (data.baselines.length > 0) {
-        await supabase.from("personal_records").upsert(
-          data.baselines.map(b => ({
-            swimmer_id: swimmer.id,
-            stroke: b.stroke,
-            distance: String(b.distance),
-            best_time_ms: timeStringToMs(b.timeString),
-            set_at: new Date().toISOString().split("T")[0],
-            is_baseline: true,
-          })),
-          { onConflict: "swimmer_id,stroke,distance" }
-        );
-      }
-
-      await supabase
-        .from("swimmers")
-        .update({ onboarding_done: true })
-        .eq("id", swimmer.id);
-
-      setStatus("done");
-      reset();
-      setTimeout(() => router.replace("/swimmer"), 1500);
-    } catch (e) {
-      console.error(e);
-      setStatus("error");
-    }
-  }
+  // Fire the save exactly once, as soon as the swimmer context resolves.
+  useEffect(() => {
+    if (!ready || started.current) return;
+    started.current = true;
+    if (!swimmerId) { setStatus("error"); return; }
+    saveOnboarding
+      .mutateAsync({ swimmerId, data })
+      .then(() => {
+        setStatus("done");
+        reset();
+        setTimeout(() => router.replace("/swimmer"), 1500);
+      })
+      .catch(() => setStatus("error"));
+  }, [ready, swimmerId]);
 
   return (
     <View style={s.container}>

@@ -18,6 +18,7 @@ export interface PersonalRecord {
 export interface YearlyGoal {
   season_year: number;
   target_pool_km: number | null;
+  target_dryland_hours: number | null;
   target_workouts: number | null;
   target_stroke: string | null;
   target_distance: string | null;
@@ -40,6 +41,7 @@ export interface ProgressionRow {
   distance: string;
   stroke: string;
   competition_date: string;
+  competition_name: string | null;
   result_time_ms: number;
   improvement_pct: number | null;
 }
