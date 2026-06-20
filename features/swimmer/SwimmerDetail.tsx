@@ -1,9 +1,12 @@
-import { View, ScrollView, TouchableOpacity, StyleSheet, type DimensionValue } from "react-native";
-import { ChevronLeft, Target } from "lucide-react-native";
+import { View, ScrollView, StyleSheet, type DimensionValue } from "react-native";
+import { Target } from "lucide-react-native";
 import { Text } from "@/components/ui/Text";
+import { Header } from "@/components/ui/Header";
 import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
 import { msToTimeString } from "@/lib/utils/time";
-import { km, trackStatus, type SwimmerSummary } from "@/features/swimmer/swimmer-card.lib";
+import { km, goalPct, trackStatus, type SwimmerSummary, type TrackTone } from "@/features/swimmer/swimmer-card.lib";
+import { swimmerInsights, type InsightTone } from "@/features/swimmer/swimmer-insights.lib";
 import {
   actualZones,
   goalForYear,
@@ -15,7 +18,7 @@ import {
 } from "@/features/swimmer/swimmer-detail.lib";
 import { STROKES } from "@/constants/strokes";
 import { ZONES, ZONE_ORDER } from "@/constants/zones";
-import { color, space, radius, shadow, fontFamily } from "@/constants/theme";
+import { color, space, radius, fontFamily } from "@/constants/theme";
 
 interface Props {
   profile: SwimmerProfile;
@@ -24,6 +27,156 @@ interface Props {
   year: number;
   seasonProgress: number;
   onBack: () => void;
+}
+
+const TONE_COLOR: Record<TrackTone | InsightTone, string> = {
+  good: color.good,
+  warn: color.warn,
+  risk: color.risk,
+  default: color.inkFaint,
+};
+
+export function SwimmerDetail({ profile, summary, progression, year, seasonProgress, onBack }: Props) {
+  const goal = goalForYear(profile, year);
+  const prs = profile.personal_records ?? [];
+
+  const currentKm = km(summary?.total_pool_m ?? 0);
+  const targetKm = goal?.target_pool_km ?? 0;
+  const hasVolumeGoal = targetKm > 0;
+  const pct = summary ? goalPct(summary) : 0;
+  const expected = Math.round(seasonProgress * 100);
+
+  const track = summary ? trackStatus(summary, seasonProgress) : null;
+  const insights = swimmerInsights(summary, seasonProgress);
+  const events = groupProgression(progression);
+
+  const currentWorkouts = summary?.total_workouts ?? 0;
+  const targetWorkouts = goal?.target_workouts ?? 0;
+  const hasZoneData = (summary?.total_pool_m ?? 0) > 0;
+
+  return (
+    <View style={styles.root}>
+      <Header
+        onBack={onBack}
+        title={profile.full_name}
+        subtitle={profile.birth_date ? `s. ${new Date(profile.birth_date).getFullYear()}` : undefined}
+        right={track && track.tone !== "default" ? <Badge label={track.label} tone={track.tone} /> : undefined}
+      />
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Hero — the season headline */}
+        <Card>
+          <Text variant="label">Kausitavoite {year}</Text>
+          {hasVolumeGoal ? (
+            <>
+              <View style={styles.heroRow}>
+                <Text variant="hero">{pct}</Text>
+                <Text variant="display" color={color.inkMuted} style={styles.heroUnit}>%</Text>
+              </View>
+              <View style={styles.paceTrack}>
+                <View style={[styles.paceFill, { width: `${Math.min(pct, 100)}%` as DimensionValue, backgroundColor: TONE_COLOR[track?.tone ?? "default"] }]} />
+                <View style={[styles.paceMarker, { left: `${Math.min(expected, 100)}%` as DimensionValue }]} />
+              </View>
+              <Text variant="caption" color={color.inkMuted}>
+                {currentKm} / {targetKm} km · tavoitetahti {expected}%
+              </Text>
+            </>
+          ) : (
+            <>
+              <View style={styles.heroRow}>
+                <Text variant="hero">{currentKm}</Text>
+                <Text variant="display" color={color.inkMuted} style={styles.heroUnit}>km</Text>
+              </View>
+              <Text variant="caption" color={color.inkMuted}>Ei vuositavoitetta asetettu.</Text>
+            </>
+          )}
+        </Card>
+
+        {/* Mitä seuraavaksi — deterministic insight */}
+        {insights.length > 0 && (
+          <Card>
+            <Text variant="heading" style={styles.cardTitle}>Mitä seuraavaksi</Text>
+            {insights.map((it, i) => (
+              <View key={i} style={styles.insightRow}>
+                <View style={[styles.insightDot, { backgroundColor: TONE_COLOR[it.tone] }]} />
+                <Text variant="body" style={styles.flex}>{it.text}</Text>
+              </View>
+            ))}
+          </Card>
+        )}
+
+        {/* Remaining goal parts (volume lives in the hero) */}
+        {goal && (targetWorkouts > 0 || goal.target_stroke) && (
+          <Card>
+            <Text variant="heading" style={styles.cardTitle}>Tavoite {year}</Text>
+            {targetWorkouts > 0 && (
+              <GoalRow label="Harjoituskerrat" current={currentWorkouts} target={targetWorkouts} />
+            )}
+            {goal.target_stroke && (
+              <View style={styles.raceGoal}>
+                <View style={styles.raceGoalLeft}>
+                  <Target size={15} color={color.primaryInk} strokeWidth={2.2} />
+                  <Text variant="bodyStrong" color={color.primaryInk}>
+                    {goal.target_distance}m {STROKES[goal.target_stroke as keyof typeof STROKES]?.label}
+                  </Text>
+                </View>
+                <Text variant="mono" color={color.primaryInk}>
+                  {goal.target_time_ms ? msToTimeString(goal.target_time_ms) : "—"}
+                </Text>
+              </View>
+            )}
+          </Card>
+        )}
+
+        {/* Zone distribution — actual vs plan */}
+        <Card>
+          <Text variant="heading" style={styles.cardTitle}>Tehoaluejakauma</Text>
+          {hasZoneData
+            ? <ZoneBar actual={actualZones(summary)} target={targetZones(goal)} />
+            : <Text variant="body" color={color.inkMuted}>Ei harjoitusdataa vielä.</Text>}
+        </Card>
+
+        {/* PRs */}
+        {prs.length > 0 && (
+          <Card>
+            <Text variant="heading" style={styles.cardTitle}>Henkilökohtaiset ennätykset</Text>
+            {prs.map((pr) => (
+              <View key={pr.id} style={styles.prRow}>
+                <Text variant="body" style={styles.flex}>
+                  {pr.distance}m {STROKES[pr.stroke as keyof typeof STROKES]?.label ?? pr.stroke}
+                </Text>
+                <Text variant="mono" color={color.primaryInk}>{msToTimeString(pr.best_time_ms)}</Text>
+                {pr.is_baseline && <Text variant="label" style={styles.baseline}>lähtötaso</Text>}
+              </View>
+            ))}
+          </Card>
+        )}
+
+        {/* Competition progression */}
+        {events.map(({ event, results, improvedMs }) => (
+          <Card key={event}>
+            <View style={styles.eventHeader}>
+              <Text variant="heading">{event}</Text>
+              {improvedMs != null && (
+                <Text variant="bodyStrong" color={improvedMs > 0 ? color.good : color.risk}>
+                  {improvedMs > 0 ? "−" : "+"}{msToTimeString(Math.abs(improvedMs))}
+                </Text>
+              )}
+            </View>
+            {results.slice(-5).map((r) => (
+              <View key={r.competition_date + r.result_time_ms} style={styles.resultRow}>
+                <Text variant="caption" style={styles.flex}>{r.competition_date}</Text>
+                <Text variant="mono">{msToTimeString(r.result_time_ms)}</Text>
+                {r.improvement_pct != null && r.improvement_pct > 0 && (
+                  <Text variant="label" color={color.good} style={styles.resultImprovement}>−{r.improvement_pct}%</Text>
+                )}
+              </View>
+            ))}
+          </Card>
+        ))}
+      </ScrollView>
+    </View>
+  );
 }
 
 function ProgressBar({ pct, fill = color.primary }: { pct: number; fill?: string }) {
@@ -87,136 +240,20 @@ function ZoneBar({ actual, target }: { actual: ZoneRecord; target?: ZoneRecord }
   );
 }
 
-export function SwimmerDetail({ profile, summary, progression, year, seasonProgress, onBack }: Props) {
-  const goal = goalForYear(profile, year);
-  const prs = profile.personal_records ?? [];
-
-  const actual = actualZones(summary);
-  const target = targetZones(goal);
-
-  const currentKm = km(summary?.total_pool_m ?? 0);
-  const targetKm = goal?.target_pool_km ?? 0;
-  const currentWorkouts = summary?.total_workouts ?? 0;
-  const targetWorkouts = goal?.target_workouts ?? 0;
-  const track = summary ? trackStatus(summary, seasonProgress) : null;
-  const events = groupProgression(progression);
-
-  return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
-          <ChevronLeft size={18} color={color.primary} strokeWidth={2.5} />
-          <Text variant="bodyStrong" color={color.primary}>Takaisin</Text>
-        </TouchableOpacity>
-        <View style={styles.nameRow}>
-          <View style={styles.nameWrap}>
-            <Text variant="title">{profile.full_name}</Text>
-            {profile.birth_date && (
-              <Text variant="caption">s. {new Date(profile.birth_date).getFullYear()}</Text>
-            )}
-          </View>
-          {track && track.tone !== "default" && <Badge label={track.label} tone={track.tone} />}
-        </View>
-      </View>
-
-      <View style={styles.body}>
-        {goal && (
-          <View style={styles.card}>
-            <Text variant="heading" style={styles.cardTitle}>Vuositavoite {year}</Text>
-            <GoalRow label="Uintimetrit" current={currentKm} target={targetKm} unit=" km" />
-            <GoalRow label="Harjoituskerrat" current={currentWorkouts} target={targetWorkouts} />
-            {goal.target_stroke && (
-              <View style={styles.raceGoal}>
-                <View style={styles.raceGoalLeft}>
-                  <Target size={15} color={color.primaryInk} strokeWidth={2.2} />
-                  <Text variant="bodyStrong" color={color.primaryInk}>
-                    {goal.target_distance}m {STROKES[goal.target_stroke as keyof typeof STROKES]?.label}
-                  </Text>
-                </View>
-                <Text variant="mono" color={color.primaryInk}>
-                  {goal.target_time_ms ? msToTimeString(goal.target_time_ms) : "—"}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        <View style={styles.card}>
-          <Text variant="heading" style={styles.cardTitle}>Tehoaluejakauma</Text>
-          {(summary?.total_pool_m ?? 0) > 0
-            ? <ZoneBar actual={actual} target={target} />
-            : <Text variant="body" color={color.inkMuted}>Ei harjoitusdataa vielä.</Text>
-          }
-        </View>
-
-        {prs.length > 0 && (
-          <View style={styles.card}>
-            <Text variant="heading" style={styles.cardTitle}>Henkilökohtaiset ennätykset</Text>
-            {prs.map((pr) => (
-              <View key={pr.id} style={styles.prRow}>
-                <Text variant="body" color={color.ink} style={styles.flex}>
-                  {pr.distance}m {STROKES[pr.stroke as keyof typeof STROKES]?.label ?? pr.stroke}
-                </Text>
-                <Text variant="mono" color={color.primaryInk}>{msToTimeString(pr.best_time_ms)}</Text>
-                {pr.is_baseline && <Text variant="label" style={styles.baseline}>lähtötaso</Text>}
-              </View>
-            ))}
-          </View>
-        )}
-
-        {events.map(({ event, results, improvedMs }) => (
-          <View key={event} style={styles.card}>
-            <View style={styles.eventHeader}>
-              <Text variant="heading">{event}</Text>
-              {improvedMs != null && (
-                <Text variant="bodyStrong" color={improvedMs > 0 ? color.good : color.risk}>
-                  {improvedMs > 0 ? "−" : "+"}{msToTimeString(Math.abs(improvedMs))}
-                </Text>
-              )}
-            </View>
-            {results.slice(-5).map((r) => (
-              <View key={r.competition_date + r.result_time_ms} style={styles.resultRow}>
-                <Text variant="caption" style={styles.flex}>{r.competition_date}</Text>
-                <Text variant="mono">{msToTimeString(r.result_time_ms)}</Text>
-                {r.improvement_pct != null && r.improvement_pct > 0 && (
-                  <Text variant="label" color={color.good} style={styles.resultImprovement}>−{r.improvement_pct}%</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        ))}
-      </View>
-    </ScrollView>
-  );
-}
-
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.bg },
-  scrollContent: { paddingBottom: space.xxxl },
+  root: { flex: 1 },
+  content: { padding: space.lg, gap: space.md, paddingBottom: space.xxxl },
   flex: { flex: 1 },
-
-  header: {
-    backgroundColor: color.surface,
-    paddingTop: 56,
-    paddingBottom: space.lg,
-    paddingHorizontal: space.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
-  },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 2, marginBottom: space.sm, marginLeft: -4 },
-  nameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.sm },
-  nameWrap: { flex: 1, gap: 2 },
-
-  body: { padding: space.lg, gap: space.md },
-  card: {
-    backgroundColor: color.surface,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-    padding: space.lg,
-    ...shadow.card,
-  },
   cardTitle: { marginBottom: space.md },
+
+  heroRow: { flexDirection: "row", alignItems: "baseline", gap: space.xs, marginTop: space.xs },
+  heroUnit: { transform: [{ translateY: -2 }] },
+  paceTrack: { height: 8, backgroundColor: color.bg, borderRadius: radius.pill, overflow: "hidden", marginTop: space.md, marginBottom: space.sm, position: "relative" },
+  paceFill: { height: 8, borderRadius: radius.pill },
+  paceMarker: { position: "absolute", top: -2, width: 2, height: 12, backgroundColor: color.ink, borderRadius: 1 },
+
+  insightRow: { flexDirection: "row", alignItems: "flex-start", gap: space.sm, paddingVertical: space.xs + 1 },
+  insightDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
 
   goalRow: { marginBottom: space.md },
   goalRowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space.xs },
