@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_KEY as string;
 
 // SSR-turvallinen storage: tyhjä Node.js:ssa, localStorage selaimessa
 const webStorage = {
@@ -20,7 +20,7 @@ const webStorage = {
   },
 };
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
     storage: webStorage,
     autoRefreshToken: true,
