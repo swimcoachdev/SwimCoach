@@ -32,7 +32,7 @@ npx expo start --web           # or --ios / --android (Expo Go)
 `.env.local` (gitignored) points at the local stack:
 ```
 EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:55321
-EXPO_PUBLIC_SUPABASE_ANON_KEY=<local anon key from `supabase status`>
+EXPO_PUBLIC_SUPABASE_KEY=<local anon key from `supabase status`>
 ```
 Demo login: **coach@swimcoach.test / swimcoach**. The Supabase client throws on boot without env;
 screens are empty without a seeded DB.
